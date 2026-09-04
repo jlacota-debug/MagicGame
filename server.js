@@ -7,6 +7,7 @@ const server = http.createServer(app);
 const io = new Server(server);
 
 app.use(express.static("public"));
+
 app.get("/", (req, res) => {
     res.sendFile(__dirname + "/public/index.html");
 });
@@ -2083,6 +2084,20 @@ function checkWinner() {
     }
 }
 
+
+// ======================================================
+// TV HTTP FALLBACK
+// ======================================================
+
+// Old Smart-TV browsers can load the page but fail to run Socket.IO reliably.
+// This tiny read-only endpoint lets the battlefield request the current public
+// game state with ordinary HTTP instead. Phone controllers keep using Socket.IO.
+app.get("/api/game-state", (req, res) => {
+    res.set("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
+    res.set("Pragma", "no-cache");
+    res.set("Expires", "0");
+    res.json(getPublicGameState());
+});
 
 // ======================================================
 // SOCKET
