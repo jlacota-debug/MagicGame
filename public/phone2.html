@@ -1,0 +1,2851 @@
+<!DOCTYPE html>
+<html lang="da">
+
+<head>
+
+<meta charset="UTF-8">
+
+<meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0"
+>
+
+<title>Magic Game – Phone P2</title>
+
+
+<style>
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    background: #101510;
+    color: white;
+    font-family: Arial, sans-serif;
+    min-height: 100vh;
+}
+
+header {
+    padding: 14px;
+    background: #1b251c;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    position: sticky;
+    top: 0;
+    z-index: 20;
+}
+
+.player-switch button {
+    padding: 10px 14px;
+    border: 0;
+    border-radius: 8px;
+    margin-left: 5px;
+    font-weight: bold;
+}
+
+.active {
+    background: #70c779;
+}
+
+.deck-selection-box {
+    margin: 12px; padding: 16px; border: 1px solid #476b4b; border-radius: 12px;
+    background: #132219; color: #fff;
+}
+.deck-selection-box h2 { margin: 0 0 6px; }
+.deck-selection-box p { margin: 4px 0 12px; opacity: .82; }
+.deck-choice {
+    width: 100%; text-align: left; padding: 14px; margin: 8px 0; border-radius: 10px;
+    border: 2px solid #38543d; background: #1b3021; color: white; cursor: pointer;
+}
+.deck-choice.red { background: #351b18; border-color: #704038; }
+.deck-choice.selected { outline: 3px solid #e1bf55; }
+.deck-choice:disabled { opacity: .7; cursor: default; }
+.deck-name { font-size: 18px; font-weight: 800; display:block; margin-bottom:4px; }
+.deck-wait { margin-top: 10px; font-weight: 700; color: #e1bf55; }
+
+.opening-hand-box {
+    margin: 15px;
+    padding: 18px;
+    border-radius: 14px;
+    background: #25351f;
+    border: 2px solid #70c779;
+    text-align: center;
+}
+.opening-hand-box h2 { margin: 0 0 8px; }
+.opening-hand-box p { margin: 6px 0 14px; opacity: .85; }
+.keep-hand {
+    width: 100%;
+    border: 0;
+    padding: 14px;
+    border-radius: 9px;
+    background: #70c779;
+    font-weight: 900;
+    font-size: 16px;
+}
+.keep-hand:disabled { opacity: .55; }
+.mulligan-hand {
+    width: 100%; border: 2px solid #d9a441; padding: 13px; margin-top: 10px;
+    border-radius: 9px; background: #3b2d16; color: #ffd36a; font-weight: 900; font-size: 16px;
+}
+.mulligan-hand:disabled { opacity: .45; }
+.mulligan-bottom-choice { outline: 4px solid #ffd36a !important; cursor: pointer; }
+
+.turn-box {
+    margin: 15px;
+    padding: 14px;
+    border-radius: 12px;
+    background: #19251b;
+}
+
+.your-turn {
+    background: #294b2d;
+}
+
+.buttons {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-top: 12px;
+}
+
+.action {
+    border: 0;
+    padding: 12px 15px;
+    border-radius: 8px;
+    font-weight: bold;
+}
+
+.attack {
+    background: #d56b4d;
+}
+
+.confirm {
+    background: #6fc77a;
+}
+
+.end {
+    background: #d8a94d;
+}
+
+.skip {
+    background: #888;
+}
+
+.priority-panel {
+    display: none;
+    margin: 12px 15px;
+    padding: 12px;
+    border: 1px solid #6fc77a;
+    border-radius: 12px;
+    background: #17351f;
+    box-shadow: 0 0 0 1px rgba(111,199,122,.12) inset;
+}
+.priority-panel.show { display: block; }
+.priority-title {
+    display: block;
+    margin-bottom: 8px;
+    font-size: 15px;
+}
+.priority-panel .action { width: 100%; }
+
+.no-blockers-warning {
+    display: none;
+    width: 100%;
+    margin-top: 8px;
+    padding: 12px;
+    border: 2px solid #d8a94d;
+    border-radius: 10px;
+    background: #3b2d16;
+    color: #fff2c7;
+}
+.no-blockers-warning.show { display: block; }
+.no-blockers-warning strong {
+    display: block;
+    margin-bottom: 6px;
+    color: #ffd36a;
+}
+.no-blockers-warning p {
+    margin: 0 0 10px;
+    line-height: 1.35;
+}
+.no-blockers-warning .warning-actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+.no-blockers-warning .action { flex: 1 1 180px; }
+
+h2 {
+    margin: 18px 16px 5px;
+}
+
+.info {
+    margin: 0 16px;
+    opacity: .7;
+}
+
+.status {
+    margin: 12px 16px;
+    min-height: 24px;
+    font-weight: bold;
+}
+
+.status.error {
+    color: #ff7777;
+}
+
+.status.ok {
+    color: #83e28d;
+}
+
+.grid {
+    display: grid;
+    grid-template-columns:
+        repeat(2, 1fr);
+    gap: 12px;
+    padding: 16px;
+}
+
+.card {
+    min-height: 190px;
+
+    background:
+        linear-gradient(
+            145deg,
+            #755d38,
+            #302619
+        );
+
+    border:
+        3px solid #c8b58b;
+
+    border-radius: 14px;
+
+    padding: 12px;
+
+    display: flex;
+    flex-direction: column;
+    justify-content:
+        space-between;
+
+    cursor: pointer;
+    user-select: none;
+}
+
+.card.selectable {
+    border: 4px solid #7edd88;
+}
+
+.card.selected-attacker {
+    border: 4px solid #ff6652;
+
+    box-shadow:
+        0 0 18px
+        rgba(255,90,60,.6);
+}
+
+.card.attack-target {
+    border: 4px solid #ffc857;
+}
+
+.card.assigned-blocker {
+    border: 4px solid #65a9ff;
+}
+
+.card.tapped {
+    opacity: .45;
+}
+
+.name-row {
+    display: flex;
+    justify-content:
+        space-between;
+}
+
+.name {
+    font-weight: bold;
+}
+
+.cost {
+    background:
+        rgba(0,0,0,.35);
+
+    border-radius: 999px;
+
+    padding: 3px 7px;
+}
+
+.icon {
+    font-size: 54px;
+    text-align: center;
+}
+
+.ability {
+    margin-top: 6px;
+    text-align: center;
+    font-size: 13px;
+    font-weight: 800;
+    background: rgba(0,0,0,.28);
+    border-radius: 8px;
+    padding: 4px 6px;
+}
+
+.spell-effect {
+    margin-top: 8px;
+    text-align: center;
+    font-size: 17px;
+    font-weight: 950;
+    letter-spacing: .3px;
+    background: rgba(10,10,10,.52);
+    border: 1px solid rgba(255,255,255,.18);
+    border-radius: 10px;
+    padding: 8px 7px;
+    box-shadow: inset 0 0 10px rgba(255,255,255,.04);
+}
+.spell-effect.damage { font-size: 20px; }
+.spell-effect.buff { font-size: 20px; }
+
+.stats {
+    text-align: right;
+    font-size: 22px;
+    font-weight: bold;
+}
+
+.assignment {
+    margin-top: 5px;
+    font-size: 12px;
+    text-align: center;
+}
+
+.combat-panel {
+    display: none;
+
+    margin: 15px;
+
+    padding: 15px;
+
+    border-radius: 12px;
+
+    background: #321d18;
+}
+
+.combat-panel.show {
+    display: block;
+}
+
+.combat-damage-panel {
+    display: none;
+    margin: 15px;
+    padding: 16px;
+    border-radius: 12px;
+    background: #203a24;
+    border: 1px solid #3f7a49;
+}
+
+.combat-damage-panel.show {
+    display: block;
+}
+
+.combat-damage-panel .damage-title {
+    display: block;
+    margin-bottom: 10px;
+    font-weight: 900;
+}
+
+.combat-damage-panel .damage-action {
+    width: 100%;
+    font-size: 16px;
+    padding: 14px 16px;
+}
+
+.attacker-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 12px;
+}
+
+.attacker-button {
+    border: 2px solid #999;
+    background: #292929;
+    color: white;
+    border-radius: 8px;
+    padding: 10px;
+}
+
+.attacker-button.target {
+    border-color: #ffc857;
+    background: #5a4620;
+}
+
+.mana-box {
+    margin: 12px 16px 4px;
+    padding: 12px 14px;
+    border-radius: 12px;
+    background: #17331d;
+    border: 1px solid #3f6948;
+    font-weight: bold;
+}
+
+.land-grid {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    padding: 12px 16px 4px;
+}
+
+.land-mini {
+    width: 92px;
+    min-height: 118px;
+    border: 2px solid #b9c9b9;
+    border-radius: 10px;
+    background: #194526;
+    padding: 8px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    transition: transform .15s, opacity .15s;
+}
+
+.land-mini.mountain {
+    background: #5a2b22;
+}
+
+.land-mini.tapped {
+    transform: rotate(90deg);
+    opacity: .55;
+    margin: 0 14px;
+}
+
+.land-mini .land-icon {
+    font-size: 34px;
+    text-align: center;
+}
+
+.land-mini .land-state {
+    font-size: 11px;
+    text-align: center;
+    opacity: .85;
+}
+
+.graveyard-box {
+    margin: 0 16px 16px;
+    padding: 10px 12px;
+    border-radius: 10px;
+    background: rgba(0,0,0,.22);
+    font-size: 13px;
+    opacity: .8;
+}
+
+.target-panel {
+    margin: 12px 16px;
+    padding: 14px;
+    border-radius: 12px;
+    background: #3a2118;
+    display: none;
+}
+
+.target-panel.show { display: block; }
+
+.target-options {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+    margin-top: 10px;
+}
+
+.target-option {
+    border: 0;
+    border-radius: 9px;
+    padding: 11px 8px;
+    font-weight: bold;
+}
+
+.reset {
+    display: block;
+    margin: 25px auto;
+    opacity: .5;
+}
+
+.discard-choice { outline: 3px solid #e16b5a !important; cursor: pointer; }
+
+/* v5.8 Visual phase tracker */
+.phase-tracker{margin:12px 18px;padding:12px;background:#101a12;border:1px solid #315d35;border-radius:12px}
+.phase-major{display:grid;grid-template-columns:repeat(5,1fr);gap:5px;margin-bottom:8px}
+.phase-major span,.phase-steps span{padding:7px 4px;border-radius:7px;text-align:center;font-size:11px;font-weight:700;background:#202820;color:#7e8b80;border:1px solid #354039}
+.phase-major span.done,.phase-steps span.done{color:#a8cbb0;background:#18351f}
+.phase-major span.active,.phase-steps span.active{color:#fff;background:#315d35;border-color:#69b975;box-shadow:0 0 10px rgba(105,185,117,.22)}
+.phase-steps{display:flex;gap:5px;flex-wrap:wrap}.phase-steps span{flex:1;min-width:55px}
+.phase-tracker-title{font-size:11px;letter-spacing:1px;color:#9fb2a3;margin-bottom:7px}
+
+/* #58 / v6.3: personal phone Game Over overlay */
+.phone-game-over{position:fixed;inset:0;z-index:9999;display:none;align-items:center;justify-content:center;padding:24px;background:rgba(4,8,13,.92);backdrop-filter:blur(6px)}
+.phone-game-over.show{display:flex}.phone-game-over-card{width:min(420px,92vw);text-align:center;padding:38px 24px;border:2px solid #d7b85b;border-radius:22px;background:linear-gradient(180deg,#1b2530,#0d131a);box-shadow:0 0 50px rgba(215,184,91,.22)}
+.phone-game-over-result{font-size:38px;font-weight:1000;margin-bottom:12px}.phone-game-over-detail{font-size:17px;color:#c9d1d9;line-height:1.45}.new-game-button{margin-top:26px;width:100%;border:0;border-radius:14px;padding:16px 18px;font-size:18px;font-weight:900;cursor:pointer;background:#d7b85b;color:#10151b;box-shadow:0 8px 24px rgba(215,184,91,.22)}.new-game-button:active{transform:translateY(1px)}
+</style>
+
+</head>
+
+
+<body>
+<div class="phone-game-over" id="phoneGameOver">
+ <div class="phone-game-over-card">
+  <div class="phone-game-over-result" id="phoneGameOverResult"></div>
+  <div class="phone-game-over-detail" id="phoneGameOverDetail"></div>
+  <button class="new-game-button" onclick="startNewGameFromGameOver()">🔄 NYT SPIL</button>
+ </div>
+</div>
+
+
+
+<header>
+
+<div>
+
+<strong id="playerName">
+PLAYER 2
+</strong>
+
+&nbsp; ❤️
+
+<span id="life">
+20
+</span>
+
+</div>
+
+
+<div class="player-switch" style="display:none">
+
+<button
+    id="p1"
+    onclick="setPlayer(1)"
+>
+P1
+</button>
+
+<button
+    id="p2"
+    class="active"
+    onclick="setPlayer(2)"
+>
+P2
+</button>
+
+</div>
+
+</header>
+
+
+<div class="deck-selection-box" id="deckSelectionBox" style="display:none">
+    <h2>🎴 VÆLG DIT DECK</h2>
+    <p>Vælg det deck, du vil spille med. Begge spillere må gerne vælge det samme.</p>
+    <button class="deck-choice" id="forestDeckButton" onclick="selectDeck('forest_fury')">
+        <span class="deck-name">🌲 FOREST FURY</span>
+        Grøn · Creatures · Growth · Trample<br>
+        <small>40 kort · 14 lands · 20 creatures · 6 support · <span id="forestValidation">✓ GYLDIGT DECK</span></small>
+    </button>
+    <button class="deck-choice red" id="redDeckButton" onclick="selectDeck('burning_legion')">
+        <span class="deck-name">🔥 BURNING LEGION</span>
+        Rød · Damage · Aggro · Fire<br>
+        <small>40 kort · 14 lands · 19 creatures · 7 spells · <span id="redValidation">✓ GYLDIGT DECK</span></small>
+    </button>
+    <div class="deck-wait" id="deckWaitText"></div>
+</div>
+
+<div class="opening-hand-box" id="openingHandBox" style="display:none">
+    <h2>🎴 DIN STARTHÅND</h2>
+    <p id="openingHandText">Se dine 7 kort. Når du er tilfreds, behold hånden.</p>
+    <button class="keep-hand" id="keepHandButton" onclick="keepOpeningHand()">BEHOLD 7 KORT</button>
+    <button class="mulligan-hand" id="mulliganButton" onclick="takeMulligan()">🔄 MULLIGAN – TRÆK 7 NYE</button>
+</div>
+
+<div
+    class="turn-box"
+    id="turnBox"
+>
+
+<strong id="turnText">
+DIN TUR
+</strong>
+
+<div id="turnNumber">
+Turn 1
+</div>
+
+<div id="phaseText">
+Main phase
+</div>
+
+
+<div class="buttons">
+
+<button
+    class="action attack"
+    id="combatButton"
+    onclick="startCombat()"
+>
+⚔️ START COMBAT
+</button>
+
+
+<button
+    class="action confirm"
+    id="beginAttackersButton"
+    onclick="beginDeclareAttackers()"
+>
+⚔️ FORTSÆT TIL ANGREB
+</button>
+
+
+<button
+    class="action confirm"
+    id="confirmAttackersButton"
+    onclick="confirmAttackers()"
+    style="display:none"
+>
+CONFIRM ATTACKERS (0 ER OK)
+</button>
+
+
+<button
+    class="action skip"
+    id="skipCombatButton"
+    onclick="skipCombat()"
+    style="display:none"
+>
+INGEN ANGREB
+</button>
+
+
+<button
+    class="action confirm"
+    id="confirmBlockersButton"
+    onclick="confirmBlockers()"
+    style="display:none"
+>
+CONFIRM BLOCKERS
+</button>
+
+
+<div class="no-blockers-warning" id="noBlockersWarning">
+    <strong>⚠️ INGEN BLOCKERS VALGT</strong>
+    <p>Du har creatures, der lovligt kan blokere. Vil du virkelig lade angrebet gå igennem?</p>
+    <div class="warning-actions">
+        <button class="action end" onclick="confirmNoBlockersAnyway()">JA, INGEN BLOCKERS</button>
+        <button class="action skip" onclick="cancelNoBlockersWarning()">TILBAGE</button>
+    </div>
+</div>
+
+
+<button
+    class="action confirm"
+    id="passPriorityButton"
+    onclick="passPriority()"
+    style="display:none"
+>
+PASS PRIORITY
+</button>
+
+<button
+    class="action end"
+    id="endTurnButton"
+    onclick="endTurn()"
+>
+END TURN
+</button>
+
+<button
+    class="action confirm"
+    id="continueToCleanupButton"
+    onclick="continueToCleanup()"
+    style="display:none"
+>
+🌙 FORTSÆT TIL CLEANUP
+</button>
+
+<button
+    class="action confirm"
+    id="finishCleanupButton"
+    onclick="finishCleanup()"
+    style="display:none"
+>
+🧹 AFSLUT TUREN
+</button>
+
+</div>
+
+</div>
+
+
+<div class="phase-tracker" id="phaseTracker">
+ <div class="phase-tracker-title">TURN PHASES</div>
+ <div class="phase-major" id="phaseMajor"></div>
+ <div class="phase-steps" id="phaseSteps"></div>
+</div>
+
+<div class="combat-damage-panel" id="combatDamagePanel">
+    <strong class="damage-title">⚔️ COMBAT DAMAGE</strong>
+    <button
+        class="action confirm damage-action"
+        id="resolveCombatDamageButton"
+        onclick="resolveCombatDamage()"
+    >
+        ⚔️ AFGØR COMBAT DAMAGE
+    </button>
+</div>
+
+<div class="combat-damage-panel" id="endCombatPanel">
+    <strong class="damage-title">🏁 END OF COMBAT</strong>
+    <button
+        class="action confirm damage-action"
+        id="continueEndCombatButton"
+        onclick="continueFromEndCombat()"
+    >
+        FORTSÆT TIL MAIN PHASE 2
+    </button>
+</div>
+
+<div
+    class="combat-panel"
+    id="combatPanel"
+>
+
+<strong id="combatInstruction">
+COMBAT
+</strong>
+
+<div
+    class="attacker-list"
+    id="attackerList"
+>
+</div>
+
+</div>
+
+
+<div class="priority-panel" id="priorityPanel">
+    <strong class="priority-title" id="priorityTitle">⚡ PRIORITY — PLAYER 1</strong>
+    <button class="action confirm" id="priorityPanelButton" onclick="passPriority()">
+        PASS PRIORITY
+    </button>
+</div>
+
+
+<div class="mana-box" id="manaBox">
+⚡ Tilgængelig mana: 0
+</div>
+
+<h2>
+Dine lands
+</h2>
+
+<div class="land-grid" id="lands">
+</div>
+
+<h2>
+Dine creatures
+</h2>
+
+<div
+    class="grid"
+    id="creatures"
+>
+</div>
+
+<h2>
+Dine enchantments
+</h2>
+
+<div
+    class="grid"
+    id="enchantments"
+>
+</div>
+
+<h2>
+Dine artifacts
+</h2>
+
+<div
+    class="grid"
+    id="artifacts"
+>
+</div>
+
+<h2>
+Din exile
+</h2>
+
+<div
+    class="grid"
+    id="exile"
+>
+</div>
+
+
+<h2>
+Din graveyard
+</h2>
+
+<div class="grid" id="graveyardCards"></div>
+
+<h2>
+Din hånd
+</h2>
+
+<div class="info">
+
+🃏
+<span id="handCount">
+0
+</span>
+
+&nbsp;&nbsp;
+
+📚
+<span id="libraryCount">
+0
+</span>
+
+&nbsp;&nbsp;
+
+☠️
+<span id="graveyardCount">
+0
+</span>
+
+</div>
+
+<div class="graveyard-box" id="graveyardBox">
+Graveyard: tom
+</div>
+
+<div class="target-panel" id="targetPanel">
+    <strong id="targetTitle">Vælg mål</strong>
+    <div class="target-options" id="targetOptions"></div>
+</div>
+
+<div
+    class="status"
+    id="status"
+>
+</div>
+
+
+<div
+    class="grid"
+    id="hand"
+>
+</div>
+
+
+<button
+    class="reset"
+    onclick="resetGame()"
+>
+Reset game
+</button>
+
+
+<script src="/socket.io/socket.io.js"></script>
+
+
+<script>
+
+const socket = io();
+
+const FIXED_PLAYER = 2;
+let currentPlayer = FIXED_PLAYER;
+
+let hand = [];
+
+let creatures = [];
+
+let enchantments = [];
+
+let artifacts = [];
+
+let exile = [];
+
+let lands = [];
+
+let mana = { green: 0, red: 0, available: 0, total: 0 };
+
+let graveyard = [];
+
+let opponentCreatures = [];
+
+let gameCurrentPlayer = 1;
+
+let gameTurnNumber = 1;
+
+let phase = "main";
+let turnStep = "main";
+
+let combat = {
+    attackerIds: [],
+    blockers: {}
+};
+
+// v5.2.3: dedicated phone-side attacker selection mirror.
+// It is updated optimistically on tap, then replaced by canonical server state.
+let uiAttackerIds = [];
+
+let selectedBlockTarget = null;
+let pendingSpell = null;
+let stack = [];
+let priorityPlayer = 1;
+let pendingPriorityTransition = null;
+let pendingDiscard = null;
+let openingHandReady = { 1: false, 2: false };
+let mulliganCount = { 1: 0, 2: 0 };
+let pendingMulliganBottom = { 1: 0, 2: 0 };
+let selectedDecks = { 1: null, 2: null };
+let deckValidation = {};
+
+
+// ======================================================
+// PLAYER VIEW
+// ======================================================
+
+socket.on(
+    "playerView",
+    data => {
+
+        if (
+            data.player !==
+            currentPlayer
+        ) {
+            return;
+        }
+
+
+        hand =
+            data.hand;
+
+        creatures =
+            data.creatures;
+
+        enchantments =
+            data.enchantments || [];
+
+        artifacts =
+            data.artifacts || [];
+
+        exile =
+            data.exile || [];
+
+        lands =
+            data.lands || [];
+
+        mana =
+            data.mana || { green: 0, red: 0, available: 0, total: 0 };
+
+        graveyard =
+            data.graveyard || [];
+
+        opponentCreatures =
+            data.opponentCreatures;
+
+        gameCurrentPlayer =
+            data.currentPlayer;
+
+        gameTurnNumber =
+            data.turnNumber;
+
+        phase =
+            data.phase;
+
+        turnStep = data.turnStep || data.phase;
+
+        combat =
+            data.combat;
+
+        uiAttackerIds = Array.isArray(combat?.attackerIds)
+            ? [...combat.attackerIds]
+            : [];
+
+        stack = data.stack || [];
+        priorityPlayer = Number(data.priorityPlayer || gameCurrentPlayer);
+        pendingPriorityTransition = data.pendingPriorityTransition || null;
+        pendingDiscard = data.pendingDiscard || null;
+        openingHandReady = data.openingHandReady || { 1: false, 2: false };
+        mulliganCount = data.mulliganCount || { 1: 0, 2: 0 };
+        pendingMulliganBottom = data.pendingMulliganBottom || { 1: 0, 2: 0 };
+        selectedDecks = data.selectedDecks || { 1: null, 2: null };
+        if (data.gameOver) {
+            showPhoneGameOver({ winner: data.winner, loser: data.loser, reason: data.gameOverReason });
+        } else {
+            const overlay = document.getElementById("phoneGameOver");
+            if (overlay) overlay.classList.remove("show");
+        }
+
+
+        document
+            .getElementById(
+                "life"
+            )
+            .textContent =
+            data.life;
+
+
+        document
+            .getElementById(
+                "libraryCount"
+            )
+            .textContent =
+            data.libraryCount;
+
+
+        document
+            .getElementById(
+                "graveyardCount"
+            )
+            .textContent =
+            data.graveyardCount || 0;
+
+        document
+            .getElementById("graveyardBox")
+            .textContent = graveyard.length
+                ? "Graveyard: " + graveyard.map(card => `${card.icon || "☠️"} ${card.name}`).join(" · ")
+                : "Graveyard: tom";
+
+
+        if (
+            selectedBlockTarget &&
+            !combat.attackerIds.includes(
+                selectedBlockTarget
+            )
+        ) {
+            selectedBlockTarget =
+                null;
+        }
+
+
+        render();
+    }
+);
+
+
+
+function renderDeckSelection() {
+    const box = document.getElementById("deckSelectionBox");
+    const turnBox = document.getElementById("turnBox");
+    const openingBox = document.getElementById("openingHandBox");
+    const isSelecting = phase === "deck_selection";
+    box.style.display = isSelecting ? "block" : "none";
+    if (!isSelecting) return;
+
+    turnBox.style.display = "none";
+    openingBox.style.display = "none";
+    const mine = selectedDecks[currentPlayer];
+    const forest = document.getElementById("forestDeckButton");
+    const red = document.getElementById("redDeckButton");
+    forest.classList.toggle("selected", mine === "forest_fury");
+    red.classList.toggle("selected", mine === "burning_legion");
+    const forestCheck = deckValidation.forest_fury || { valid: true, errors: [] };
+    const redCheck = deckValidation.burning_legion || { valid: true, errors: [] };
+    document.getElementById("forestValidation").textContent = forestCheck.valid ? "✓ GYLDIGT DECK" : "⚠ UGYLDIGT DECK";
+    document.getElementById("redValidation").textContent = redCheck.valid ? "✓ GYLDIGT DECK" : "⚠ UGYLDIGT DECK";
+    forest.title = forestCheck.valid ? "Decket opfylder reglerne" : (forestCheck.errors || []).join(" ");
+    red.title = redCheck.valid ? "Decket opfylder reglerne" : (redCheck.errors || []).join(" ");
+    forest.disabled = !!mine || !forestCheck.valid;
+    red.disabled = !!mine || !redCheck.valid;
+
+    const other = currentPlayer === 1 ? 2 : 1;
+    const wait = document.getElementById("deckWaitText");
+    if (!mine) wait.textContent = "Vælg et deck for at blive klar.";
+    else if (!selectedDecks[other]) wait.textContent = "✓ Deck valgt — venter på den anden spiller…";
+    else wait.textContent = "✓ Begge spillere er klar.";
+}
+
+function selectDeck(deckId) {
+    if (phase !== "deck_selection" || selectedDecks[currentPlayer]) return;
+    socket.emit("selectDeck", { player: currentPlayer, deckId });
+}
+
+function renderOpeningHand() {
+    const box = document.getElementById("openingHandBox");
+    const turnBox = document.getElementById("turnBox");
+    const button = document.getElementById("keepHandButton");
+    const mulliganButton = document.getElementById("mulliganButton");
+    const text = document.getElementById("openingHandText");
+    const isOpening = phase === "opening_hand";
+
+    box.style.display = isOpening ? "block" : "none";
+    turnBox.style.display = (isOpening || phase === "deck_selection") ? "none" : "block";
+    if (!isOpening) return;
+
+    const ready = !!openingHandReady[currentPlayer];
+    const count = Number(mulliganCount[currentPlayer] || 0);
+    const bottom = Number(pendingMulliganBottom[currentPlayer] || 0);
+
+    if (bottom > 0) {
+        button.style.display = "none";
+        mulliganButton.style.display = "none";
+        text.textContent = `Du har taget ${count} mulligan${count === 1 ? "" : "s"}. Vælg ${bottom} kort fra hånden nedenfor, som skal nederst i dit Library.`;
+        return;
+    }
+
+    button.style.display = "block";
+    mulliganButton.style.display = ready ? "none" : "block";
+    button.disabled = ready;
+    mulliganButton.disabled = ready;
+    button.textContent = ready ? "✓ HÅND BEKRÆFTET" : `BEHOLD ${hand.length} KORT`;
+    text.textContent = ready
+        ? "Du er klar. Venter på den anden spiller…"
+        : count > 0
+            ? `Mulligan #${count}: Se dine 7 nye kort. Behold dem eller tag endnu en mulligan.`
+            : `Se dine ${hand.length} kort nedenfor. Behold hånden eller tag en mulligan.`;
+}
+
+function keepOpeningHand() {
+    socket.emit("keepOpeningHand", { player: currentPlayer });
+}
+
+function takeMulligan() {
+    socket.emit("mulliganOpeningHand", { player: currentPlayer });
+}
+
+// ======================================================
+// GAME STATE
+// ======================================================
+
+// #50 / v5.4.5: refresh the phone when Combat Damage begins so the dedicated panel appears immediately.
+socket.on(
+    "combatDamageStarted",
+    () => {
+        requestPlayerView();
+    }
+);
+
+socket.on(
+    "gameState",
+    state => {
+
+        gameCurrentPlayer =
+            state.currentPlayer;
+
+        gameTurnNumber =
+            state.turnNumber;
+
+        phase =
+            state.phase;
+
+        turnStep = state.turnStep || state.phase;
+
+        combat =
+            state.combat;
+
+        uiAttackerIds = Array.isArray(combat?.attackerIds)
+            ? [...combat.attackerIds]
+            : [];
+
+        stack = state.stack || [];
+        priorityPlayer = Number(state.priorityPlayer || gameCurrentPlayer);
+        pendingPriorityTransition = state.pendingPriorityTransition || null;
+        openingHandReady = state.openingHandReady || { 1: false, 2: false };
+        mulliganCount = state.mulliganCount || { 1: 0, 2: 0 };
+        pendingMulliganBottom = state.pendingMulliganBottom || { 1: 0, 2: 0 };
+        selectedDecks = state.selectedDecks || { 1: null, 2: null };
+        deckValidation = state.deckValidation || {};
+
+
+        requestPlayerView();
+    }
+);
+
+
+// ======================================================
+// RENDER
+// ======================================================
+
+function render() {
+
+    renderDeckSelection();
+    renderOpeningHand();
+    renderTurn();
+
+    renderMana();
+
+    renderLands();
+
+    renderHand();
+
+    renderCreatures();
+
+    renderEnchantments();
+
+    renderArtifacts();
+
+    renderExile();
+
+    renderGraveyardCards();
+
+    renderCombat();
+
+    // v5.2.2: final sync after every complete render, so no later render can leave stale text.
+    updateAttackerCounter();
+}
+
+
+function updateAttackerCounter() {
+    const button = document.getElementById("confirmAttackersButton");
+    if (!button) return;
+
+    // v5.2.4: The original "0 ER OK" was only static helper text.
+    // The actual visible attacker selection is the source of truth for this UI label.
+    const selectedCards = document.querySelectorAll("#creatures .selected-attacker");
+    const count = selectedCards.length;
+
+    button.textContent = count === 0
+        ? "CONFIRM ATTACKERS (0 ER OK)"
+        : `CONFIRM ATTACKERS (${count} VALGT)`;
+    button.dataset.attackerCount = String(count);
+}
+
+
+
+// #50 / v5.4.5: Combat Damage now has its own dedicated panel below the turn box.
+// END TURN remains a normal turn button and is disabled during combat steps.
+
+
+function renderPhaseTracker(){
+ const step=turnStep||phase;
+ const groups=[
+  {name:"BEGINNING",steps:[["untap","Untap"],["upkeep","Upkeep"],["draw","Draw"]]},
+  {name:"MAIN 1",steps:[["main1","Main 1"],["main","Main 1"]]},
+  {name:"COMBAT",steps:[["begin_combat","Beginning"],["declare_attackers","Attackers"],["choose_attackers","Attackers"],["declare_blockers","Blockers"],["choose_blockers","Blockers"],["combat_damage","Damage"],["end_combat","End"]]},
+  {name:"MAIN 2",steps:[["main2","Main 2"]]},
+  {name:"ENDING",steps:[["end_step","End"],["cleanup","Cleanup"]]}
+ ];
+ let gi=groups.findIndex(g=>g.steps.some(x=>x[0]===step)); if(gi<0) gi=0;
+ const major=document.getElementById('phaseMajor'), sub=document.getElementById('phaseSteps'); if(!major||!sub)return;
+ major.innerHTML=groups.map((g,i)=>`<span class="${i<gi?'done':i===gi?'active':''}">${i<gi?'✓ ':''}${g.name}</span>`).join('');
+ const unique=[]; groups[gi].steps.forEach(x=>{if(!unique.some(y=>y[1]===x[1]))unique.push(x)});
+ let activeIndex=unique.findIndex(x=>x[0]===step || groups[gi].steps.filter(y=>y[1]===x[1]).some(y=>y[0]===step));
+ sub.innerHTML=unique.map((x,i)=>`<span class="${i<activeIndex?'done':i===activeIndex?'active':''}">${i<activeIndex?'✓ ':''}${x[1]}</span>`).join('');
+}
+
+function renderTurn() {
+
+    const yourTurn =
+        currentPlayer ===
+        gameCurrentPlayer;
+
+    document
+        .getElementById(
+            "turnBox"
+        )
+        .classList.toggle(
+            "your-turn",
+            yourTurn
+        );
+
+
+    document
+        .getElementById(
+            "turnText"
+        )
+        .textContent =
+
+        yourTurn
+            ? "DIN TUR"
+            : `PLAYER ${gameCurrentPlayer}'S TUR`;
+
+
+    document
+        .getElementById(
+            "turnNumber"
+        )
+        .textContent =
+        "Turn " +
+        gameTurnNumber;
+
+
+    const names = {
+        opening_hand: "Opening hand",
+        untap: "Untap step",
+        upkeep: "Upkeep step",
+        draw: "Draw step",
+        main: "Precombat main phase",
+        begin_combat: "Beginning of combat",
+        choose_attackers: "Declare attackers",
+        declare_attackers: "Declare attackers",
+        choose_blockers: "Declare blockers",
+        combat_damage: "Combat damage",
+        end_combat: "End of combat",
+        main2: "Main Phase 2",
+        end_step: "End step",
+        cleanup: "Cleanup step"
+    };
+
+
+    document
+        .getElementById(
+            "phaseText"
+        )
+        .textContent =
+        names[phase] ||
+        phase;
+
+    renderPhaseTracker();
+
+
+    document
+        .getElementById(
+            "combatButton"
+        )
+        .style.display =
+
+        yourTurn &&
+        phase === "main"
+            ? "block"
+            : "none";
+
+
+    // v5.1.1: robust Beginning of Combat -> Declare Attackers control.
+    // Use both phase and turnStep and explicitly drive both hidden + display,
+    // so the button cannot remain hidden because of stale inline state.
+    const beginAttackersButton = document.getElementById("beginAttackersButton");
+    const inBeginningOfCombat =
+        yourTurn &&
+        (phase === "begin_combat" || turnStep === "begin_combat");
+
+    beginAttackersButton.hidden = !inBeginningOfCombat;
+    beginAttackersButton.style.display = inBeginningOfCombat ? "inline-block" : "none";
+
+
+    const confirmAttackersButton = document.getElementById("confirmAttackersButton");
+    confirmAttackersButton.style.display =
+        yourTurn && phase === "choose_attackers" ? "block" : "none";
+
+    // v5.2.2: Counter is driven directly from the canonical combat.attackerIds state.
+    updateAttackerCounter();
+
+
+    document
+        .getElementById(
+            "skipCombatButton"
+        )
+        .style.display =
+
+        yourTurn &&
+        phase ===
+            "choose_attackers"
+            ? "block"
+            : "none";
+
+
+    const defending =
+        !yourTurn &&
+        phase === "choose_blockers";
+
+
+    const confirmBlockersButton = document.getElementById("confirmBlockersButton");
+    confirmBlockersButton.hidden = !defending;
+    confirmBlockersButton.style.display = defending ? "inline-block" : "none";
+    // The shield assignment already shows selected blockers clearly, so keep this button simple.
+    confirmBlockersButton.textContent = "CONFIRM BLOCKERS";
+
+    const noBlockersWarning = document.getElementById("noBlockersWarning");
+    const assignedBlockerCount = Object.values(combat.blockers || {})
+        .reduce((total, ids) => total + (Array.isArray(ids) ? ids.length : 0), 0);
+    if (noBlockersWarning && (!defending || assignedBlockerCount > 0)) {
+        noBlockersWarning.classList.remove("show");
+    }
+
+    // #50 / v5.4.5: dedicated Combat Damage panel, completely separate from END TURN.
+    const combatDamagePanel = document.getElementById("combatDamagePanel");
+    const resolveCombatDamageButton = document.getElementById("resolveCombatDamageButton");
+    const inCombatDamage =
+        yourTurn &&
+        (phase === "combat_damage" || turnStep === "combat_damage");
+
+    if (combatDamagePanel) {
+        combatDamagePanel.classList.toggle("show", inCombatDamage);
+    }
+    if (resolveCombatDamageButton) {
+        resolveCombatDamageButton.disabled = !inCombatDamage;
+    }
+
+    // #51 / v5.5: dedicated End of Combat panel.
+    const endCombatPanel = document.getElementById("endCombatPanel");
+    const continueEndCombatButton = document.getElementById("continueEndCombatButton");
+    const inEndCombat =
+        yourTurn &&
+        (phase === "end_combat" || turnStep === "end_combat");
+
+    if (endCombatPanel) {
+        // v5.6.1: End of Combat has its own explicit phase-transition control.
+        // Do not rely only on CSS classes; force the visibility from turnStep.
+        endCombatPanel.classList.toggle("show", inEndCombat);
+        endCombatPanel.hidden = !inEndCombat;
+        endCombatPanel.style.display = inEndCombat ? "block" : "none";
+    }
+    if (continueEndCombatButton) {
+        continueEndCombatButton.disabled = !inEndCombat;
+        continueEndCombatButton.hidden = !inEndCombat;
+        continueEndCombatButton.style.display = inEndCombat ? "block" : "none";
+        continueEndCombatButton.textContent = "FORTSÆT TIL MAIN PHASE 2";
+    }
+
+    // #53 / v5.7.2: END TURN performs End Step + Cleanup automatically.
+    // Keep the old development controls hidden; END TURN is the single whole-turn action.
+    const continueToCleanupButton = document.getElementById("continueToCleanupButton");
+    if (continueToCleanupButton) {
+        continueToCleanupButton.disabled = true;
+        continueToCleanupButton.style.display = "none";
+    }
+
+    const finishCleanupButton = document.getElementById("finishCleanupButton");
+    if (finishCleanupButton) {
+        finishCleanupButton.disabled = true;
+        finishCleanupButton.style.display = "none";
+    }
+
+    const endTurnButton = document.getElementById("endTurnButton");
+    if (endTurnButton) {
+        // Permanent UI rule from v5.6.1:
+        // END TURN only ends the whole turn. It is never a phase/step navigation button.
+        endTurnButton.textContent = "END TURN";
+        endTurnButton.className = "action end";
+        const canEndWholeTurn =
+            yourTurn &&
+            (phase === "main2" || turnStep === "main2");
+        endTurnButton.disabled = !canEndWholeTurn;
+    }
+
+
+    // #54 / v5.9.1: dedicated priority panel. It must remain visible even with an empty stack.
+    const passButton = document.getElementById("passPriorityButton");
+    if (passButton) passButton.style.display = "none";
+
+    const prioritySteps = new Set([
+        "upkeep", "draw", "main1", "begin_combat", "declare_attackers",
+        "declare_blockers", "combat_damage", "end_combat", "main2", "end_step"
+    ]);
+    // v5.9.2 smart priority UI: do not ask the active player to manually pass
+    // an empty priority window. Phase/action buttons are their implicit pass.
+    // Show the panel for stack interaction, or when the opponent has been given
+    // a real response window by an attempted phase transition.
+    const priorityRelevant = stack.length > 0 || (prioritySteps.has(turnStep) && priorityPlayer !== gameCurrentPlayer);
+    const hasPriorityHere = priorityRelevant && currentPlayer === priorityPlayer;
+    const priorityPanel = document.getElementById("priorityPanel");
+    const priorityTitle = document.getElementById("priorityTitle");
+    const priorityPanelButton = document.getElementById("priorityPanelButton");
+
+    if (priorityPanel) priorityPanel.classList.toggle("show", hasPriorityHere);
+    if (priorityTitle) {
+        const responseText = pendingPriorityTransition === "start_combat"
+            ? "⚡ MODSTANDEREN VIL GÅ TIL COMBAT"
+            : pendingPriorityTransition === "declare_attackers"
+                ? "⚡ MODSTANDEREN VIL VÆLGE ANGRIBERE"
+                : pendingPriorityTransition === "end_turn"
+                    ? "⚡ MODSTANDEREN VIL AFSLUTTE TUREN"
+                    : stack.length
+                        ? "⚡ DU KAN REAGERE PÅ STACKEN"
+                        : "⚡ DU KAN REAGERE";
+        priorityTitle.textContent = responseText;
+    }
+    if (priorityPanelButton) {
+        priorityPanelButton.disabled = !hasPriorityHere;
+        priorityPanelButton.textContent = stack.length
+            ? "INGEN REAKTION · LAD EFFEKTEN FORTSÆTTE"
+            : "INGEN REAKTION";
+    }
+
+}
+
+
+// ======================================================
+// MANA + LANDS
+// ======================================================
+
+function renderMana() {
+    const parts = [];
+
+    if (mana.green) parts.push(`🌲 ${mana.green} grøn`);
+    if (mana.red) parts.push(`🌋 ${mana.red} rød`);
+
+    document.getElementById("manaBox").textContent =
+        `⚡ Tilgængelig mana: ${mana.available}` +
+        (parts.length ? ` · ${parts.join(" · ")}` : "") +
+        ` · Lands i alt: ${mana.total}`;
+}
+
+function renderLands() {
+    const container = document.getElementById("lands");
+    container.innerHTML = "";
+
+    lands.forEach(land => {
+        const element = document.createElement("div");
+        element.className = "land-mini";
+
+        if (land.name === "Mountain") {
+            element.classList.add("mountain");
+        }
+
+        if (land.tapped) {
+            element.classList.add("tapped");
+        }
+
+        element.innerHTML = `
+            <strong>${land.name}</strong>
+            <div class="land-icon">${land.icon}</div>
+            <div class="land-state">${land.tapped ? "TAPPED" : "KLAR"}</div>
+        `;
+
+        container.appendChild(element);
+    });
+}
+
+
+// ======================================================
+// HAND
+// ======================================================
+
+function renderHand() {
+
+    const container =
+        document.getElementById(
+            "hand"
+        );
+
+
+    container.innerHTML = "";
+
+    if (pendingDiscard && Number(pendingDiscard.player) === currentPlayer) {
+        const notice = document.createElement("div");
+        notice.style.gridColumn = "1 / -1";
+        notice.style.padding = "14px";
+        notice.style.marginBottom = "10px";
+        notice.style.borderRadius = "12px";
+        notice.style.background = "#5a241d";
+        notice.style.fontWeight = "800";
+        notice.textContent = `🧠 ${pendingDiscard.source}: Vælg ${pendingDiscard.count} kort fra hånden at discarde`;
+        container.appendChild(notice);
+    }
+
+
+    document
+        .getElementById(
+            "handCount"
+        )
+        .textContent =
+        hand.length;
+
+
+    hand.forEach(
+        card => {
+
+            const element =
+                createCard(card);
+
+
+            if (phase === "opening_hand" && Number(pendingMulliganBottom[currentPlayer] || 0) > 0) {
+                element.classList.add("mulligan-bottom-choice");
+                element.onclick = () => {
+                    socket.emit("mulliganBottomCard", { player: currentPlayer, cardId: card.id });
+                };
+            } else if (pendingDiscard && Number(pendingDiscard.player) === currentPlayer) {
+                element.classList.add("discard-choice");
+                element.onclick = () => {
+                    socket.emit("discardCardRequest", { player: currentPlayer, cardId: card.id });
+                };
+            } else {
+                element.onclick = () => playCard(card.id);
+            }
+
+
+            container
+                .appendChild(
+                    element
+                );
+        }
+    );
+}
+
+
+// ======================================================
+// CREATURES
+// ======================================================
+
+function renderCreatures() {
+
+    const container =
+        document.getElementById(
+            "creatures"
+        );
+
+
+    container.innerHTML = "";
+
+
+    const attackingPlayer =
+        currentPlayer ===
+        gameCurrentPlayer;
+
+
+    const defending =
+        !attackingPlayer &&
+        phase ===
+            "choose_blockers";
+
+
+    creatures.forEach(
+        creature => {
+
+            const element =
+                createCard(
+                    creature
+                );
+
+
+            if (
+                creature.tapped
+            ) {
+                element.classList.add(
+                    "tapped"
+                );
+            }
+
+
+            // --------------------------------
+            // SELECT ATTACKERS
+            // --------------------------------
+
+            if (
+                attackingPlayer &&
+                phase ===
+                    "choose_attackers" &&
+                !creature.tapped &&
+                !(Array.isArray(creature.abilities) && creature.abilities.includes("defender")) &&
+                (creature.enteredTurn < gameTurnNumber || (Array.isArray(creature.abilities) && creature.abilities.includes("haste")))
+            ) {
+
+                element.classList.add(
+                    "selectable"
+                );
+
+
+                if (
+                    uiAttackerIds
+                        .includes(
+                            creature.id
+                        )
+                ) {
+                    element.classList.add(
+                        "selected-attacker"
+                    );
+                }
+
+
+                element.onclick =
+                    () =>
+                        toggleAttacker(
+                            creature.id
+                        );
+            }
+
+
+            // --------------------------------
+            // BLOCKERS
+            // --------------------------------
+
+            if (
+                defending &&
+                !creature.tapped
+            ) {
+
+                element.classList.add(
+                    "selectable"
+                );
+
+
+                const assignedTo =
+                    findBlockAssignment(
+                        creature.id
+                    );
+
+
+                if (assignedTo) {
+
+                    element.classList.add(
+                        "assigned-blocker"
+                    );
+
+
+                    const attacker =
+                        opponentCreatures
+                            .find(
+                                c =>
+                                    c.id ===
+                                    assignedTo
+                            );
+
+
+                    const label =
+                        document
+                            .createElement(
+                                "div"
+                            );
+
+
+                    label.className =
+                        "assignment";
+
+
+                    label.textContent =
+                        attacker
+                            ? `🛡️ → ${attacker.name}`
+                            : "🛡️ BLOCKING";
+
+
+                    element.appendChild(
+                        label
+                    );
+                }
+
+
+                element.onclick =
+                    () => {
+
+                        if (
+                            assignedTo &&
+                            !selectedBlockTarget
+                        ) {
+
+                            removeBlocker(
+                                creature.id
+                            );
+
+                            return;
+                        }
+
+
+                        if (
+                            !selectedBlockTarget
+                        ) {
+
+                            showStatus(
+                                "Vælg først den angriber, du vil blokere.",
+                                "error"
+                            );
+
+                            return;
+                        }
+
+
+                        assignBlocker(
+                            selectedBlockTarget,
+                            creature.id
+                        );
+                    };
+            }
+
+
+            container
+                .appendChild(
+                    element
+                );
+        }
+    );
+}
+
+
+function renderEnchantments() {
+    const container = document.getElementById("enchantments");
+    container.innerHTML = "";
+
+    enchantments.forEach(enchantment => {
+        const element = createCard(enchantment);
+        const target = creatures.find(c => c.id === enchantment.attachedTo)
+            || opponentCreatures.find(c => c.id === enchantment.attachedTo);
+
+        const label = document.createElement("div");
+        label.className = "ability";
+        label.textContent = target
+            ? `✨ ENCHANTS ${target.name}`
+            : "✨ AURA";
+        element.appendChild(label);
+
+        container.appendChild(element);
+    });
+}
+
+
+function renderGraveyardCards() {
+    const container = document.getElementById("graveyardCards");
+    container.innerHTML = "";
+
+    graveyard.forEach(card => {
+        const element = createCard(card);
+        const label = document.createElement("div");
+        label.className = "ability";
+        label.textContent = "🪦 GRAVEYARD";
+        element.appendChild(label);
+        container.appendChild(element);
+    });
+}
+
+
+function renderExile() {
+    const container = document.getElementById("exile");
+    container.innerHTML = "";
+
+    exile.forEach(card => {
+        const element = createCard(card);
+        const label = document.createElement("div");
+        label.className = "ability";
+        label.textContent = "🌀 EXILED";
+        element.appendChild(label);
+        container.appendChild(element);
+    });
+}
+
+
+function renderArtifacts() {
+    const container = document.getElementById("artifacts");
+    container.innerHTML = "";
+
+    artifacts.forEach(artifact => {
+        const element = createCard(artifact);
+
+        const label = document.createElement("div");
+        label.className = "ability";
+        label.textContent = artifact.tapped ? "↻ TAPPED" : "⚙️ ARTIFACT";
+        element.appendChild(label);
+
+        if (artifact.activatedAbility) {
+            const button = document.createElement("button");
+            button.className = "action";
+            if (artifact.activatedAbility.cost === "sacrifice_creature") {
+                button.textContent = "💀 ACTIVATE · SACRIFICE CREATURE";
+                button.disabled = false;
+            } else {
+                button.textContent = artifact.tapped ? "USED / TAPPED" : "⚡ ACTIVATE · TAP: GAIN 1 LIFE";
+                button.disabled = !!artifact.tapped;
+            }
+            button.onclick = event => {
+                event.stopPropagation();
+
+                if (artifact.activatedAbility.cost === "sacrifice_creature") {
+                    if (!creatures.length) {
+                        alert("Du har ingen creature at sacrifice.");
+                        return;
+                    }
+
+                    const choices = creatures
+                        .map((creature, index) => `${index + 1}: ${creature.name} ${creature.power}/${creature.toughness}`)
+                        .join("\n");
+
+                    const answer = prompt(
+                        `Vælg creature at sacrifice:\n\n${choices}\n\nSkriv nummeret:`
+                    );
+
+                    if (answer === null) return;
+
+                    const selected = creatures[Number(answer) - 1];
+                    if (!selected) {
+                        alert("Ugyldigt valg.");
+                        return;
+                    }
+
+                    socket.emit("activateAbility", {
+                        player: currentPlayer,
+                        permanentId: artifact.id,
+                        sacrificeId: selected.id
+                    });
+                    return;
+                }
+
+                socket.emit("activateAbility", {
+                    player: currentPlayer,
+                    permanentId: artifact.id
+                });
+            };
+            element.appendChild(button);
+        }
+
+        container.appendChild(element);
+    });
+}
+
+
+function createCard(card) {
+
+    const element =
+        document.createElement(
+            "div"
+        );
+
+
+    element.className =
+        "card";
+
+
+    element.innerHTML = `
+
+        <div class="name-row">
+
+            <div class="name">
+                ${card.name}
+            </div>
+
+            <div class="cost">
+                ${card.cost || ""}
+            </div>
+
+        </div>
+
+
+        <div class="icon">
+            ${card.icon}
+        </div>
+
+
+        ${card.effect === "damage" ? `<div class="spell-effect damage">🔥 ${Number(card.damage || 0)} DAMAGE</div>` : ''}
+        ${card.effect === "pump" ? `<div class="spell-effect buff">🌿 +${Number(card.powerBonus || 0)}/+${Number(card.toughnessBonus || 0)}</div>` : ''}
+        ${card.effect === "plus1_counter" ? `<div class="spell-effect buff">➕ +${Number(card.counters || 1)}/+${Number(card.counters || 1)} COUNTER</div>` : ''}
+
+        ${Array.isArray(card.abilities) && card.abilities.includes("trample") ? '<div class="ability">🐾 TRAMPLE</div>' : ''}
+        ${Array.isArray(card.abilities) && card.abilities.includes("first_strike") ? '<div class="ability">⚔️ FIRST STRIKE</div>' : ''}
+        ${Array.isArray(card.abilities) && card.abilities.includes("double_strike") ? '<div class="ability">⚔️⚔️ DOUBLE STRIKE</div>' : ''}
+        ${Array.isArray(card.abilities) && card.abilities.includes("deathtouch") ? '<div class="ability">☠️ DEATHTOUCH</div>' : ''}
+        ${Array.isArray(card.abilities) && card.abilities.includes("lifelink") ? '<div class="ability">❤️ LIFELINK</div>' : ''}
+        ${Array.isArray(card.abilities) && card.abilities.includes("flying") ? '<div class="ability">🪽 FLYING</div>' : ''}
+        ${Array.isArray(card.abilities) && card.abilities.includes("reach") ? '<div class="ability">🏹 REACH</div>' : ''}
+        ${Array.isArray(card.abilities) && card.abilities.includes("vigilance") ? '<div class="ability">👁️ VIGILANCE</div>' : ''}
+        ${Array.isArray(card.abilities) && card.abilities.includes("haste") ? '<div class="ability">⚡ HASTE</div>' : ''}
+        ${Array.isArray(card.abilities) && card.abilities.includes("menace") ? '<div class="ability">👹 MENACE</div>' : ''}
+        ${Array.isArray(card.abilities) && card.abilities.includes("hexproof") ? '<div class="ability">🛡️ HEXPROOF</div>' : ''}
+        ${Array.isArray(card.abilities) && card.abilities.includes("indestructible") ? '<div class="ability">💎 INDESTRUCTIBLE</div>' : ''}
+        ${Array.isArray(card.abilities) && card.abilities.includes("ward_2") ? '<div class="ability">🛡️ WARD 2</div>' : ''}
+        ${Array.isArray(card.abilities) && card.abilities.includes("protection_red") ? '<div class="ability">🛡️ PROTECTION FROM RED</div>' : ''}
+        ${Array.isArray(card.abilities) && card.abilities.includes("flash") ? '<div class="ability">⚡ FLASH</div>' : ''}
+        ${Array.isArray(card.abilities) && card.abilities.includes("defender") ? '<div class="ability">🧱 DEFENDER</div>' : ''}
+        ${Number(card.plus1Counters || 0) > 0 ? `<div class="ability">➕ +1/+1 × ${Number(card.plus1Counters)}</div>` : ''}
+        ${card.effect === "create_tokens" ? `<div class="ability">🍄 CREATE ${Number(card.tokenCount || 1)} × ${Number(card.tokenPower || 1)}/${Number(card.tokenToughness || 1)} TOKEN</div>` : ''}
+        ${card.effect === "aura_buff" ? `<div class="ability">✨ ENCHANT CREATURE · +${Number(card.powerBonus || 0)}/+${Number(card.toughnessBonus || 0)}</div>` : ''}
+        ${card.effect === "exile_creature" ? `<div class="ability">🌀 EXILE TARGET CREATURE</div>` : ''}
+        ${card.effect === "return_creature_from_graveyard" ? `<div class="ability">🪦 RETURN CREATURE FROM GRAVEYARD</div>` : ''}
+        ${card.effect === "draw_cards" ? `<div class="ability">📚 DRAW ${Number(card.amount || 1)} CARDS</div>` : ''}
+        ${card.effect === "discard_cards" ? `<div class="ability">🧠 OPPONENT DISCARDS ${Number(card.amount || 1)}</div>` : ''}
+        ${card.type === "artifact" ? '<div class="ability">⚙️ ARTIFACT</div>' : ''}
+        ${card.effect === "life_on_entry" ? `<div class="ability">❤️ ENTERS: GAIN ${Number(card.amount || 0)} LIFE</div>` : ''}
+        ${card.activatedAbility ? `<div class="ability">⚡ ${card.activatedAbility.text}</div>` : ''}
+        ${card.triggeredAbility ? `<div class="ability">🔔 ${card.triggeredAbility.text}</div>` : ''}
+        ${card.etbAbility ? `<div class="ability">✨ ETB: ${card.etbAbility.text}</div>` : ''}
+        ${Array.isArray(card.attachedAuras) ? card.attachedAuras.map(a => `<div class="ability">✨ ${a.name} +${Number(a.powerBonus || 0)}/+${Number(a.toughnessBonus || 0)}</div>`).join("") : ''}
+        ${card.isToken ? '<div class="ability">● TOKEN</div>' : ''}
+
+        <div class="stats">
+
+            ${
+                card.type ===
+                "creature"
+
+                    ? card.power +
+                      "/" +
+                      card.toughness
+
+                    : card.type === "spell"
+                        ? "SPELL"
+                        : card.type === "enchantment"
+                            ? "AURA"
+                            : card.type === "artifact"
+                                ? "ARTIFACT"
+                                : "LAND"
+            }
+
+        </div>
+    `;
+
+
+    return element;
+}
+
+
+// ======================================================
+// COMBAT UI
+// ======================================================
+
+function renderCombat() {
+
+    const panel =
+        document.getElementById(
+            "combatPanel"
+        );
+
+
+    const instruction =
+        document.getElementById(
+            "combatInstruction"
+        );
+
+
+    const list =
+        document.getElementById(
+            "attackerList"
+        );
+
+
+    list.innerHTML = "";
+
+
+    const show =
+        phase ===
+            "choose_attackers" ||
+        phase ===
+            "choose_blockers";
+
+
+    panel.classList.toggle(
+        "show",
+        show
+    );
+
+
+    if (!show) {
+        selectedBlockTarget =
+            null;
+
+        return;
+    }
+
+
+    if (
+        phase ===
+        "choose_attackers"
+    ) {
+
+        instruction.textContent =
+
+            currentPlayer ===
+            gameCurrentPlayer
+
+                ? "⚔️ Vælg alle creatures, der skal angribe"
+
+                : "Modstanderen vælger angribere";
+
+        return;
+    }
+
+
+    // --------------------------------
+    // BLOCK PHASE
+    // --------------------------------
+
+    const defending =
+        currentPlayer !==
+        gameCurrentPlayer;
+
+
+    if (!defending) {
+
+        instruction.textContent =
+            "🛡️ Modstanderen vælger blockers";
+
+        return;
+    }
+
+
+    instruction.textContent =
+        "🛡️ Vælg en angriber og derefter dine blockers";
+
+
+    combat.attackerIds
+        .forEach(
+            attackerId => {
+
+                const attacker =
+                    opponentCreatures
+                        .find(
+                            creature =>
+                                creature.id ===
+                                attackerId
+                        );
+
+
+                if (!attacker) {
+                    return;
+                }
+
+
+                const button =
+                    document.createElement(
+                        "button"
+                    );
+
+
+                button.className =
+                    "attacker-button";
+
+
+                if (
+                    selectedBlockTarget ===
+                    attacker.id
+                ) {
+
+                    button.classList.add(
+                        "target"
+                    );
+                }
+
+
+                const blockerCount =
+                    (
+                        combat.blockers[
+                            attacker.id
+                        ] || []
+                    ).length;
+
+
+                const menaceText =
+                    Array.isArray(attacker.abilities) && attacker.abilities.includes("menace")
+                        ? " · 👹 MENACE (min. 2 blockers)"
+                        : "";
+
+                button.textContent =
+                    `${attacker.icon} ${attacker.name} ${attacker.power}/${attacker.toughness}${menaceText} · 🛡️ ${blockerCount}`;
+
+
+                button.onclick =
+                    () => {
+
+                        selectedBlockTarget =
+                            attacker.id;
+
+                        render();
+                    };
+
+
+                list.appendChild(
+                    button
+                );
+            }
+        );
+}
+
+
+function findBlockAssignment(
+    blockerId
+) {
+
+    for (
+        const attackerId
+        of Object.keys(
+            combat.blockers
+        )
+    ) {
+
+        if (
+            (
+                combat.blockers[
+                    attackerId
+                ] || []
+            )
+            .includes(
+                blockerId
+            )
+        ) {
+
+            return attackerId;
+        }
+    }
+
+
+    return null;
+}
+
+
+// ======================================================
+// PLAY
+// ======================================================
+
+function playCard(cardId) {
+
+    clearStatus();
+
+    const selectedCard = hand.find(card => card.id === cardId);
+
+    if (selectedCard && (selectedCard.type === "spell" || selectedCard.type === "enchantment" || selectedCard.type === "artifact")) {
+        if (selectedCard.effect === "create_tokens" || selectedCard.effect === "draw_cards" || selectedCard.type === "artifact") {
+            socket.emit(
+                "playCardRequest",
+                {
+                    player: currentPlayer,
+                    cardId
+                }
+            );
+            return;
+        }
+
+        chooseSpellTarget(selectedCard);
+        return;
+    }
+
+    socket.emit(
+        "playCardRequest",
+        {
+            player: currentPlayer,
+            cardId
+        }
+    );
+}
+
+function chooseSpellTarget(card) {
+    pendingSpell = card;
+
+    const opponent = currentPlayer === 1 ? 2 : 1;
+    const panel = document.getElementById("targetPanel");
+    const title = document.getElementById("targetTitle");
+    const options = document.getElementById("targetOptions");
+
+    title.textContent = `${card.icon} ${card.name} ${card.cost} — vælg mål`;
+    options.innerHTML = "";
+    panel.classList.add("show");
+
+    if (card.effect === "discard_cards") {
+        addTargetButton(`🧠 Player ${opponent} — discard ${Number(card.amount || 1)}`, () => {
+            socket.emit("playCardRequest", {
+                player: currentPlayer,
+                cardId: card.id,
+                target: { type: "player", player: opponent }
+            });
+            cancelTargeting();
+        });
+        addTargetButton("Annuller", cancelSpell);
+        return;
+    }
+
+    if (card.effect === "return_creature_from_graveyard") {
+        const creatureCards = graveyard.filter(graveCard => graveCard.type === "creature");
+
+        if (!creatureCards.length) {
+            addDisabledTargetButton("🪦 Ingen creatures i din graveyard");
+        } else {
+            creatureCards.forEach(graveCard => {
+                addTargetButton(
+                    `🪦 ${graveCard.icon} ${graveCard.name} ${Number(graveCard.power || 0)}/${Number(graveCard.toughness || 0)}`,
+                    () => {
+                        socket.emit("playCardRequest", {
+                            player: currentPlayer,
+                            cardId: card.id,
+                            target: {
+                                type: "graveyard_creature",
+                                player: currentPlayer,
+                                id: graveCard.id
+                            }
+                        });
+                        cancelTargeting();
+                    }
+                );
+            });
+        }
+        return;
+    }
+
+    if (card.effect !== "pump" && card.effect !== "plus1_counter" && card.effect !== "aura_buff" && card.effect !== "exile_creature") {
+        addTargetButton(`❤️ Player ${opponent}`, () => castSpellAtPlayer(opponent));
+    }
+
+    creatures.forEach(creature => {
+        addTargetButton(`Din ${creature.icon} ${creature.name} ${Number(creature.power || 0)}/${Number(creature.toughness || 0)}`,
+            () => castSpellAtCreature(currentPlayer, creature.id));
+    });
+
+    opponentCreatures.forEach(creature => {
+        const hasHexproof = Array.isArray(creature.abilities) && creature.abilities.includes("hexproof");
+        if (hasHexproof) {
+            addDisabledTargetButton(`🛡️ Modstanders ${creature.icon} ${creature.name} — HEXPROOF`);
+        } else {
+            const hasWard2 = Array.isArray(creature.abilities) && creature.abilities.includes("ward_2");
+            const wardText = hasWard2 ? " — 🛡️ WARD 2 (+2 mana)" : "";
+            addTargetButton(`Modstanders ${creature.icon} ${creature.name} ${Number(creature.power || 0)}/${Number(creature.toughness || 0)}${wardText}`,
+                () => castSpellAtCreature(opponent, creature.id));
+        }
+    });
+
+    addTargetButton("Annuller", cancelSpell);
+}
+
+function addTargetButton(label, handler) {
+    const button = document.createElement("button");
+    button.className = "target-option";
+    button.textContent = label;
+    button.onclick = handler;
+    document.getElementById("targetOptions").appendChild(button);
+}
+
+function addDisabledTargetButton(label) {
+    const button = document.createElement("button");
+    button.className = "target-option";
+    button.textContent = label;
+    button.disabled = true;
+    button.style.opacity = "0.45";
+    button.style.cursor = "not-allowed";
+    document.getElementById("targetOptions").appendChild(button);
+}
+
+function closeTargetPanel() {
+    document.getElementById("targetPanel").classList.remove("show");
+}
+
+function castSpellAtPlayer(player) {
+    if (!pendingSpell) return;
+    socket.emit("playCardRequest", {
+        player: currentPlayer,
+        cardId: pendingSpell.id,
+        target: { type: "player", player }
+    });
+    pendingSpell = null;
+    closeTargetPanel();
+}
+
+function castSpellAtCreature(player, id) {
+    if (!pendingSpell) return;
+    socket.emit("playCardRequest", {
+        player: currentPlayer,
+        cardId: pendingSpell.id,
+        target: { type: "creature", player, id }
+    });
+    pendingSpell = null;
+    closeTargetPanel();
+}
+
+function cancelSpell() {
+    pendingSpell = null;
+    closeTargetPanel();
+    clearStatus();
+}
+
+
+function passPriority() {
+    socket.emit("passPriority", { player: currentPlayer });
+}
+
+// ======================================================
+// COMBAT ACTIONS
+// ======================================================
+
+function startCombat() {
+
+    socket.emit(
+        "startCombat",
+        {
+            player:
+                currentPlayer
+        }
+    );
+}
+
+
+function beginDeclareAttackers() {
+
+    socket.emit(
+        "beginDeclareAttackers",
+        {
+            player:
+                currentPlayer
+        }
+    );
+}
+
+
+function toggleAttacker(
+    creatureId
+) {
+
+    // v5.2.3: Update one dedicated UI selection array immediately.
+    // The server remains authoritative; the next server state replaces this mirror.
+    if (phase === "choose_attackers" && currentPlayer === gameCurrentPlayer) {
+        const nextIds = Array.isArray(uiAttackerIds) ? [...uiAttackerIds] : [];
+        const index = nextIds.indexOf(creatureId);
+
+        if (index === -1) {
+            nextIds.push(creatureId);
+        } else {
+            nextIds.splice(index, 1);
+        }
+
+        uiAttackerIds = nextIds;
+        renderCreatures();
+        updateAttackerCounter();
+    }
+
+    socket.emit(
+        "toggleAttacker",
+        {
+            player:
+                currentPlayer,
+
+            creatureId
+        }
+    );
+}
+
+
+function confirmAttackers() {
+
+    socket.emit(
+        "confirmAttackers",
+        {
+            player:
+                currentPlayer
+        }
+    );
+}
+
+
+function assignBlocker(
+    attackerId,
+    blockerId
+) {
+
+    socket.emit(
+        "assignBlocker",
+        {
+            player:
+                currentPlayer,
+
+            attackerId,
+
+            blockerId
+        }
+    );
+}
+
+
+function removeBlocker(
+    blockerId
+) {
+
+    socket.emit(
+        "removeBlocker",
+        {
+            player:
+                currentPlayer,
+
+            blockerId
+        }
+    );
+}
+
+
+function blockerCanLegallyBlock(blocker, attacker) {
+    if (!blocker || !attacker || blocker.tapped) return false;
+
+    const attackerAbilities = Array.isArray(attacker.abilities) ? attacker.abilities : [];
+    const blockerAbilities = Array.isArray(blocker.abilities) ? blocker.abilities : [];
+
+    if (attackerAbilities.includes("flying") &&
+        !blockerAbilities.includes("flying") &&
+        !blockerAbilities.includes("reach")) {
+        return false;
+    }
+
+    if (attackerAbilities.includes("protection_red") &&
+        String(blocker.cost || "").includes("R")) {
+        return false;
+    }
+
+    return true;
+}
+
+function hasAnyLegalBlock() {
+    const attackers = (combat.attackerIds || [])
+        .map(id => opponentCreatures.find(creature => creature.id === id))
+        .filter(Boolean);
+
+    return attackers.some(attacker => {
+        const eligible = creatures.filter(blocker => blockerCanLegallyBlock(blocker, attacker));
+        const abilities = Array.isArray(attacker.abilities) ? attacker.abilities : [];
+        return abilities.includes("menace") ? eligible.length >= 2 : eligible.length >= 1;
+    });
+}
+
+function emitConfirmBlockers() {
+    socket.emit(
+        "confirmBlockers",
+        {
+            player:
+                currentPlayer
+        }
+    );
+}
+
+function confirmBlockers() {
+    const assignedBlockerCount = Object.values(combat.blockers || {})
+        .reduce((total, ids) => total + (Array.isArray(ids) ? ids.length : 0), 0);
+
+    if (assignedBlockerCount === 0 && hasAnyLegalBlock()) {
+        const warning = document.getElementById("noBlockersWarning");
+        if (warning) warning.classList.add("show");
+        return;
+    }
+
+    emitConfirmBlockers();
+}
+
+function confirmNoBlockersAnyway() {
+    const warning = document.getElementById("noBlockersWarning");
+    if (warning) warning.classList.remove("show");
+    emitConfirmBlockers();
+}
+
+function cancelNoBlockersWarning() {
+    const warning = document.getElementById("noBlockersWarning");
+    if (warning) warning.classList.remove("show");
+}
+
+
+function resolveCombatDamage() {
+
+    socket.emit(
+        "resolveCombatDamage",
+        {
+            player:
+                currentPlayer
+        }
+    );
+}
+
+
+function continueFromEndCombat() {
+    socket.emit(
+        "continueFromEndCombat",
+        { player: currentPlayer }
+    );
+}
+
+
+function continueToCleanup() {
+    socket.emit("continueToCleanup", { player: currentPlayer });
+}
+
+function finishCleanup() {
+    socket.emit("finishCleanup", { player: currentPlayer });
+}
+
+
+function skipCombat() {
+
+    socket.emit(
+        "skipCombat",
+        {
+            player:
+                currentPlayer
+        }
+    );
+}
+
+
+function endTurn() {
+
+    socket.emit(
+        "endTurn",
+        {
+            player:
+                currentPlayer
+        }
+    );
+}
+
+
+// ======================================================
+// FEEDBACK
+// ======================================================
+
+socket.on(
+    "playAccepted",
+    data => {
+
+        if (
+            data.player ===
+            currentPlayer
+        ) {
+
+            showStatus(
+                data.message,
+                "ok"
+            );
+        }
+    }
+);
+
+
+socket.on(
+    "playRejected",
+    data => {
+
+        if (
+            data.player ===
+            currentPlayer
+        ) {
+
+            showStatus(
+                data.message,
+                "error"
+            );
+        }
+    }
+);
+
+
+socket.on(
+    "actionRejected",
+    data => {
+
+        showStatus(
+            data.message,
+            "error"
+        );
+    }
+);
+
+
+socket.on(
+    "combatMessage",
+    data => {
+
+        showStatus(
+            data.text,
+            "ok"
+        );
+    }
+);
+
+
+socket.on(
+    "combatResolved",
+    data => {
+
+        showStatus(
+            data.messages.join(
+                " "
+            ),
+            "ok"
+        );
+    }
+);
+
+
+// #44 / v4.8: visible confirmation that the dedicated Upkeep Step ran.
+socket.on("upkeepStep", data => {
+    if (data.player === currentPlayer) {
+        showStatus(data.message, "ok");
+    }
+});
+
+// #45 / v4.9: visible confirmation that the dedicated Draw Step ran.
+socket.on("drawStep", data => {
+    if (data.player === currentPlayer) {
+        showStatus(data.message, "ok");
+    }
+});
+
+socket.on("spellCast", data => {
+    showStatus(data.message, "ok");
+});
+
+socket.on(
+    "spellResolved",
+    data => {
+        showStatus(data.message, "ok");
+    }
+);
+
+
+function showPhoneGameOver(data) {
+    const overlay = document.getElementById("phoneGameOver");
+    if (!overlay) return;
+    const winner = Number(data.winner || 0);
+    const result = document.getElementById("phoneGameOverResult");
+    if (!winner) result.textContent = "⚔️ GAME OVER";
+    else if (winner === Number(currentPlayer)) result.textContent = "🏆 VICTORY";
+    else result.textContent = "💀 DEFEAT";
+    document.getElementById("phoneGameOverDetail").textContent = data.reason || (winner ? `Player ${winner} vinder.` : "Kampen er slut.");
+    overlay.classList.add("show");
+}
+
+socket.on("gameOver", showPhoneGameOver);
+
+
+// ======================================================
+// PLAYER SWITCH
+// ======================================================
+
+function setPlayer(player) {
+
+    // Dedicated player page: this controller is permanently locked.
+    currentPlayer =
+        FIXED_PLAYER;
+
+
+    selectedBlockTarget =
+        null;
+
+
+    document
+        .getElementById(
+            "playerName"
+        )
+        .textContent =
+        "PLAYER " +
+        player;
+
+
+    document
+        .getElementById(
+            "p1"
+        )
+        .classList.toggle(
+            "active",
+            player === 1
+        );
+
+
+    document
+        .getElementById(
+            "p2"
+        )
+        .classList.toggle(
+            "active",
+            player === 2
+        );
+
+
+    clearStatus();
+
+    requestPlayerView();
+}
+
+
+// ======================================================
+// REQUEST
+// ======================================================
+
+function requestPlayerView() {
+
+    socket.emit(
+        "requestPlayerView",
+        {
+            player:
+                currentPlayer
+        }
+    );
+}
+
+
+// ======================================================
+// STATUS
+// ======================================================
+
+function showStatus(
+    text,
+    type
+) {
+
+    const element =
+        document.getElementById(
+            "status"
+        );
+
+
+    element.textContent =
+        text;
+
+
+    element.className =
+        "status " +
+        type;
+}
+
+
+function clearStatus() {
+
+    const element =
+        document.getElementById(
+            "status"
+        );
+
+
+    element.textContent = "";
+
+    element.className =
+        "status";
+}
+
+
+// ======================================================
+// RESET
+// ======================================================
+
+function resetGame() {
+    socket.emit("resetGame");
+}
+
+function startNewGameFromGameOver() {
+    const button = document.querySelector("#phoneGameOver .new-game-button");
+    if (button) {
+        button.disabled = true;
+        button.textContent = "STARTER NYT SPIL…";
+    }
+    socket.emit("resetGame");
+}
+
+
+socket.on(
+    "gameReset",
+    () => {
+
+        // v6.5.1: A new match must start with a completely clean status/combat log.
+        clearStatus();
+
+        const overlay = document.getElementById("phoneGameOver");
+        if (overlay) overlay.classList.remove("show");
+        const newGameButton = document.querySelector("#phoneGameOver .new-game-button");
+        if (newGameButton) {
+            newGameButton.disabled = false;
+            newGameButton.textContent = "🔄 NYT SPIL";
+        }
+
+        selectedBlockTarget =
+            null;
+
+        requestPlayerView();
+    }
+);
+
+
+socket.on(
+    "turnStarted",
+    () => {
+
+        selectedBlockTarget =
+            null;
+
+        requestPlayerView();
+    }
+);
+
+
+socket.on(
+    "connect",
+    () => {
+
+        requestPlayerView();
+    }
+);
+
+</script>
+
+</body>
+
+</html>
