@@ -69,6 +69,21 @@ body {
 /* TV mode: both players face the same viewing direction. */
 .player-2 {
     transform: none;
+    /* P2 is mirrored spatially: lands at the back/top, creatures toward the centre. */
+    grid-template-rows:
+        115px
+        auto
+        1fr;
+}
+
+.player-2 .land-zone {
+    border-top: 0;
+    border-bottom: 1px solid rgba(255,255,255,.12);
+}
+
+.player-2 .zone-label {
+    top: 5px;
+    bottom: auto;
 }
 
 .player-info {
@@ -460,6 +475,789 @@ body {
 .game-over-overlay{position:fixed;inset:0;z-index:9999;display:none;align-items:center;justify-content:center;background:rgba(3,7,12,.88);backdrop-filter:blur(7px)}
 .game-over-overlay.show{display:flex}.game-over-card{text-align:center;min-width:min(680px,82vw);padding:48px 56px;border:2px solid #d7b85b;border-radius:24px;background:linear-gradient(180deg,#1c2530,#0c1118);box-shadow:0 0 70px rgba(215,184,91,.25)}
 .game-over-kicker{font-size:26px;letter-spacing:.22em;color:#d7b85b;font-weight:900}.game-over-title{font-size:64px;margin:12px 0 10px;font-weight:1000}.game-over-reason{font-size:20px;color:#c7d0da}
+
+/* v6.7.3 Realm Battlefield Visual Test */
+body::before {
+    content:"";
+    position:fixed;
+    inset:0;
+    pointer-events:none;
+    z-index:0;
+    background:#020506;
+}
+
+.battlefield {
+    position:relative;
+    z-index:1;
+    grid-template-rows:minmax(0,1fr) 68px minmax(0,1fr);
+    background:#020506;
+    isolation:isolate;
+}
+
+.player {
+    padding:12px 22px;
+    grid-template-rows:minmax(0,1fr) auto 128px;
+    gap:5px;
+    overflow:hidden;
+    isolation:isolate;
+}
+
+.player > *:not(.realm-art):not(.realm-badge) {
+    position:relative;
+    z-index:3;
+}
+
+.realm-art {
+    position:absolute;
+    inset:0;
+    z-index:0;
+    pointer-events:none;
+    overflow:hidden;
+    transition:background 900ms ease, filter 900ms ease;
+}
+
+.realm-art::before,
+.realm-art::after {
+    content:"";
+    position:absolute;
+    inset:-15%;
+    pointer-events:none;
+}
+
+.realm-svg {
+    position:absolute;
+    inset:0;
+    width:100%;
+    height:100%;
+    opacity:0;
+    transition:opacity 900ms ease;
+}
+
+.realm-badge {
+    position:absolute;
+    z-index:2;
+    right:28px;
+    top:18px;
+    font-size:clamp(54px,6vw,104px);
+    line-height:1;
+    font-weight:1000;
+    letter-spacing:.06em;
+    color:rgba(255,255,255,.075);
+    text-shadow:0 0 35px rgba(255,255,255,.06);
+    pointer-events:none;
+    user-select:none;
+}
+.player-1 .realm-badge { top:auto; bottom:18px; }
+
+/* ---------- RED / BURNING LEGION ---------- */
+.player.theme-red .realm-art {
+    background:
+        linear-gradient(180deg, rgba(3,2,5,.98) 0%, rgba(30,4,5,.94) 46%, rgba(74,13,5,.88) 100%),
+        radial-gradient(circle at 52% 75%, rgba(255,83,15,.72), transparent 28%);
+}
+.player.theme-red .realm-art::before {
+    background:
+        radial-gradient(circle at 12% 20%, rgba(255,191,73,.95) 0 1px, transparent 2px),
+        radial-gradient(circle at 29% 61%, rgba(255,98,31,.95) 0 1.2px, transparent 2.2px),
+        radial-gradient(circle at 71% 36%, rgba(255,155,42,.9) 0 1px, transparent 2px),
+        radial-gradient(circle at 88% 68%, rgba(255,76,21,.9) 0 1.5px, transparent 2.5px);
+    background-size:79px 83px,113px 127px,149px 137px,181px 173px;
+    animation:emberRise 8s linear infinite;
+    opacity:.72;
+    filter:drop-shadow(0 0 4px rgba(255,79,18,.8));
+}
+.player.theme-red .realm-art::after {
+    background:
+        radial-gradient(ellipse at 50% 100%, rgba(255,72,0,.42), transparent 42%),
+        linear-gradient(110deg, transparent 0 46%, rgba(255,86,13,.16) 48%, transparent 50% 100%);
+    animation:infernoPulse 4.2s ease-in-out infinite alternate;
+}
+.player.theme-red .realm-svg.red-scene { opacity:.92; }
+.player.theme-red .realm-badge { color:rgba(255,93,43,.15); text-shadow:0 0 34px rgba(255,58,20,.2); }
+
+/* ---------- GREEN / FOREST FURY ---------- */
+.player.theme-green .realm-art {
+    background:
+        linear-gradient(180deg, rgba(2,10,11,.98) 0%, rgba(3,25,19,.94) 52%, rgba(5,46,27,.92) 100%),
+        radial-gradient(circle at 50% 18%, rgba(83,255,176,.25), transparent 28%);
+}
+.player.theme-green .realm-art::before {
+    background:
+        radial-gradient(circle at 8% 22%, rgba(162,255,205,.95) 0 1px, transparent 2px),
+        radial-gradient(circle at 33% 54%, rgba(98,255,174,.9) 0 1.2px, transparent 2.2px),
+        radial-gradient(circle at 67% 30%, rgba(189,255,219,.9) 0 1px, transparent 2px),
+        radial-gradient(circle at 91% 72%, rgba(76,238,148,.9) 0 1.5px, transparent 2.5px);
+    background-size:101px 97px,137px 151px,167px 139px,191px 183px;
+    animation:fireflyDrift 13s ease-in-out infinite alternate;
+    opacity:.65;
+    filter:drop-shadow(0 0 5px rgba(84,255,169,.75));
+}
+.player.theme-green .realm-art::after {
+    background:
+        radial-gradient(ellipse at 50% 88%, rgba(74,235,148,.15), transparent 36%),
+        linear-gradient(180deg, transparent 48%, rgba(173,255,218,.07) 62%, transparent 78%);
+    animation:forestMist 8s ease-in-out infinite alternate;
+}
+.player.theme-green .realm-svg.green-scene { opacity:.94; }
+.player.theme-green .realm-badge { color:rgba(100,255,168,.13); text-shadow:0 0 34px rgba(67,255,153,.15); }
+
+/* ---------- NEUTRAL / BEFORE DECK CHOICE ---------- */
+.player.theme-neutral .realm-art {
+    background:
+       radial-gradient(ellipse at center, rgba(29,42,52,.7), transparent 58%),
+       linear-gradient(180deg,#070b10,#030507);
+}
+.player.theme-neutral .realm-art::before {
+    background-image:radial-gradient(circle,rgba(255,255,255,.5) 0 1px,transparent 1.6px);
+    background-size:111px 111px;
+    animation:starDrift 22s linear infinite;
+    opacity:.3;
+}
+
+@keyframes emberRise {
+    from { transform:translate3d(0,12%,0) scale(1); }
+    to { transform:translate3d(18px,-18%,0) scale(1.04); }
+}
+@keyframes infernoPulse {
+    from { opacity:.55; filter:blur(2px); }
+    to { opacity:1; filter:blur(5px); }
+}
+@keyframes fireflyDrift {
+    from { transform:translate3d(-10px,8px,0); }
+    to { transform:translate3d(24px,-22px,0); }
+}
+@keyframes forestMist {
+    from { transform:translateX(-2%); opacity:.55; filter:blur(5px); }
+    to { transform:translateX(2%); opacity:1; filter:blur(10px); }
+}
+@keyframes starDrift { to { transform:translate3d(42px,-55px,0); } }
+
+.creature-zone { gap:18px; align-items:center; }
+.land-zone { gap:22px; border-top:1px solid rgba(255,255,255,.12); }
+.card {
+    width:132px;
+    height:182px;
+    border-radius:12px;
+    padding:11px;
+    background:linear-gradient(145deg,rgba(91,70,43,.97),rgba(28,21,14,.98));
+    box-shadow:0 12px 30px rgba(0,0,0,.66),0 0 18px rgba(255,255,255,.07);
+}
+.card .icon { font-size:46px; }
+.card-name { font-size:15px; }
+.stats { font-size:18px; }
+.land-card { width:104px; height:122px; }
+.land-card .icon { font-size:34px; }
+.artifact-card { width:108px; height:100px; }
+
+.player.theme-red .land-card {
+    background:linear-gradient(145deg,#782a18,#2b0b08);
+    box-shadow:0 10px 28px rgba(0,0,0,.6),0 0 20px rgba(255,82,24,.16);
+}
+.player.theme-green .land-card {
+    background:linear-gradient(145deg,#2e6a45,#10291a);
+    box-shadow:0 10px 28px rgba(0,0,0,.6),0 0 20px rgba(73,234,143,.12);
+}
+
+.middle,
+.bf-phase-tracker {
+    position:relative;
+    z-index:8;
+    backdrop-filter:blur(8px);
+}
+.middle {
+    background:linear-gradient(90deg,rgba(5,7,10,.98),rgba(21,24,29,.94),rgba(5,7,10,.98));
+    border-color:rgba(255,255,255,.14);
+    box-shadow:0 -8px 30px rgba(255,60,18,.06),0 8px 30px rgba(57,238,139,.06);
+}
+.bf-phase-tracker {
+    background:rgba(4,7,10,.94);
+    border-top:1px solid rgba(255,255,255,.1);
+    border-bottom:1px solid rgba(255,255,255,.1);
+    padding:6px 18px;
+}
+
+
+
+/* v6.7.4 Realm Clash tuning: less dead black space, realms meet in the middle */
+.battlefield {
+    grid-template-rows:minmax(0,1fr) 54px minmax(0,1fr);
+}
+
+.player.theme-red .realm-art {
+    background:
+        radial-gradient(ellipse at 50% 92%, rgba(255,79,10,.58) 0%, rgba(111,18,5,.30) 26%, transparent 54%),
+        linear-gradient(180deg, #090204 0%, #250607 48%, #641506 100%);
+}
+.player.theme-red .realm-art::after {
+    background:
+        radial-gradient(ellipse at 50% 100%, rgba(255,88,0,.62), transparent 48%),
+        radial-gradient(ellipse at 22% 96%, rgba(255,52,0,.28), transparent 28%),
+        radial-gradient(ellipse at 80% 92%, rgba(255,120,10,.22), transparent 30%);
+}
+
+.player.theme-green .realm-art {
+    background:
+        radial-gradient(ellipse at 50% 8%, rgba(74,255,160,.28) 0%, rgba(15,103,66,.17) 27%, transparent 58%),
+        linear-gradient(180deg, #073125 0%, #06251b 42%, #04130e 100%);
+}
+.player.theme-green .realm-art::after {
+    background:
+        radial-gradient(ellipse at 50% 3%, rgba(77,255,168,.26), transparent 38%),
+        linear-gradient(180deg, rgba(119,255,193,.10) 0%, transparent 30%, rgba(36,155,96,.10) 68%, transparent 100%),
+        radial-gradient(ellipse at 18% 20%, rgba(85,255,175,.11), transparent 22%),
+        radial-gradient(ellipse at 82% 18%, rgba(94,232,178,.10), transparent 24%);
+}
+
+/* Pull both landscapes toward the center line */
+.player-2 .realm-svg { transform:translateY(4%) scaleY(1.12); transform-origin:bottom center; }
+.player-1 .realm-svg { transform:translateY(-13%) scaleY(1.32); transform-origin:top center; }
+.player-1 .realm-svg.green-scene { filter:drop-shadow(0 -10px 22px rgba(45,217,132,.14)); }
+.player-2 .realm-svg.red-scene { filter:drop-shadow(0 12px 28px rgba(255,64,8,.16)); }
+
+/* Soft clash-light at the border so the two realms visually meet */
+.player-2::after,
+.player-1::before {
+    content:"";
+    position:absolute;
+    left:0;
+    right:0;
+    height:72px;
+    z-index:1;
+    pointer-events:none;
+}
+.player-2::after {
+    bottom:0;
+    background:linear-gradient(180deg, transparent, rgba(255,66,8,.12));
+}
+.player-1::before {
+    top:0;
+    background:linear-gradient(180deg, rgba(55,255,151,.12), transparent);
+}
+
+.middle { padding:0 22px; }
+
+@media (max-height:850px) {
+    .card{width:116px;height:158px}
+    .land-card{width:92px;height:108px}
+    .player{grid-template-rows:minmax(0,1fr) auto 112px}
+}
+@media (prefers-reduced-motion:reduce) {
+    .realm-art::before,.realm-art::after{animation:none!important}
+}
+
+
+/* v6.7.6 TV Arena: resource rail + large creature stage */
+.battlefield{grid-template-rows:1fr 72px 1fr;background:#070b0d;}
+.player{padding:14px 22px;display:grid;grid-template-columns:minmax(270px,32%) 1fr;grid-template-rows:1fr;gap:20px;overflow:hidden;}
+.player-1,.player-2{transform:none;}
+.player-info{left:26px;top:16px;z-index:12;}
+.creature-zone{grid-column:2;grid-row:1;display:flex;align-items:center;justify-content:center;gap:22px;min-width:0;padding:48px 24px 18px;z-index:5;}
+.land-zone{grid-column:1;grid-row:1;display:flex;align-items:flex-end;align-content:flex-end;justify-content:flex-start;flex-wrap:wrap;gap:8px 6px;padding:58px 10px 18px;border-top:0;border-right:1px solid rgba(255,255,255,.10);z-index:5;}
+.artifact-zone{grid-column:1;grid-row:1;align-self:center;justify-self:stretch;display:flex;justify-content:center;align-items:center;gap:8px;padding:0 12px;z-index:7;pointer-events:none;}
+.player-2 .land-zone{align-items:flex-start;align-content:flex-start;padding-top:58px;padding-bottom:18px;}
+.player-2 .artifact-zone{align-self:center;}
+.card:not(.land-card):not(.artifact-card){width:150px;height:205px;border-radius:14px;padding:12px;box-shadow:0 12px 30px rgba(0,0,0,.58),0 0 18px rgba(255,255,255,.05);}
+.card:not(.land-card):not(.artifact-card) .icon{font-size:52px;}
+.card:not(.land-card):not(.artifact-card) .card-name{font-size:16px;}
+.card:not(.land-card):not(.artifact-card) .stats{font-size:20px;}
+.land-card{width:72px;height:86px;padding:7px;border-radius:9px;}
+.land-card .icon{font-size:24px}.land-card .card-name{font-size:10px}.land-card .stats{font-size:10px;}
+.artifact-card{width:76px;height:82px;padding:7px;}
+.middle{z-index:20;box-shadow:0 0 22px rgba(0,0,0,.75);}
+.bf-phase-tracker{z-index:21;padding:7px 14px;}
+/* Let each selected realm own the whole player half; the former black void disappears. */
+.player.realm-mountain{background:radial-gradient(ellipse at 72% 55%,rgba(255,91,20,.22),transparent 45%),linear-gradient(180deg,rgba(36,3,3,.98),rgba(91,21,5,.82) 56%,rgba(22,7,4,.96));}
+.player.realm-forest{background:radial-gradient(ellipse at 72% 48%,rgba(37,255,157,.18),transparent 46%),linear-gradient(180deg,rgba(3,38,27,.92),rgba(5,83,55,.74) 54%,rgba(2,30,23,.96));}
+.player::after{content:'';position:absolute;inset:0;pointer-events:none;z-index:1;background:linear-gradient(90deg,rgba(0,0,0,.28) 0 32%,transparent 32% 100%);}
+.player .realm-art,.player .realm-particles,.player .realm-label{z-index:2;}
+.player .realm-label{font-size:70px;}
+@media(max-width:1200px){.player{grid-template-columns:30% 1fr}.card:not(.land-card):not(.artifact-card){width:128px;height:176px}.creature-zone{gap:14px}}
+
+/* v6.7.7 Frontline Arena: four real battlefield rows + armies at the front */
+.battlefield{
+    grid-template-rows:minmax(0,1fr) 54px auto minmax(0,1fr);
+}
+.player{
+    grid-template-columns:minmax(230px,24%) minmax(0,1fr);
+    gap:16px;
+}
+/* Resource rail: still compact, but readable from a TV */
+.land-zone{
+    gap:12px 10px;
+    padding-left:16px;
+    padding-right:16px;
+}
+.land-card{width:104px;height:122px;padding:9px;}
+.land-card .icon{font-size:32px;}
+.land-card .card-name{font-size:12px;}
+.land-card .stats{font-size:12px;}
+.artifact-card{width:100px;height:108px;padding:9px;}
+/* Creatures form two opposing front lines around the phase strip */
+.creature-zone{
+    justify-content:center;
+    gap:26px;
+    padding-left:24px;
+    padding-right:24px;
+}
+.player-2 .creature-zone{align-items:flex-end;padding-top:22px;padding-bottom:18px;}
+.player-1 .creature-zone{align-items:flex-start;padding-top:18px;padding-bottom:22px;}
+.card:not(.land-card):not(.artifact-card){
+    width:168px;
+    height:230px;
+}
+.card:not(.land-card):not(.artifact-card) .icon{font-size:60px;}
+.card:not(.land-card):not(.artifact-card) .card-name{font-size:17px;}
+.card:not(.land-card):not(.artifact-card) .stats{font-size:22px;}
+/* The phase tracker now owns only its natural height instead of an accidental 1fr row. */
+.middle{min-height:54px;}
+.bf-phase-tracker{position:relative;min-height:0;}
+.player::after{background:linear-gradient(90deg,rgba(0,0,0,.25) 0 24%,transparent 24% 100%);}
+@media(max-width:1200px){
+  .player{grid-template-columns:24% 1fr;}
+  .card:not(.land-card):not(.artifact-card){width:142px;height:194px;}
+  .land-card{width:90px;height:106px;}
+}
+
+/* v6.7.8 Two-Row Arena: keep cards large, then switch to tidy rows when zones fill */
+.creature-zone.two-rows{
+    display:grid;
+    grid-template-columns:repeat(4,138px);
+    grid-auto-rows:188px;
+    column-gap:22px;
+    row-gap:12px;
+    justify-content:center;
+}
+.creature-zone.two-rows .card:not(.land-card):not(.artifact-card){
+    width:138px;
+    height:188px;
+    padding:8px;
+}
+.creature-zone.two-rows .card:not(.land-card):not(.artifact-card) .icon{font-size:48px;}
+.creature-zone.two-rows .card:not(.land-card):not(.artifact-card) .card-name{font-size:14px;}
+.creature-zone.two-rows .card:not(.land-card):not(.artifact-card) .stats{font-size:19px;}
+.player-2 .creature-zone.two-rows{align-content:end;}
+.player-1 .creature-zone.two-rows{align-content:start;}
+
+/* Resources: 1-3 lands stay on one line; 4-6 become two clean rows. */
+.land-zone.two-rows{
+    display:grid;
+    grid-template-columns:repeat(3,104px);
+    grid-auto-rows:122px;
+    column-gap:10px;
+    row-gap:10px;
+    justify-content:center;
+}
+.player-2 .land-zone.two-rows{align-content:start;}
+.player-1 .land-zone.two-rows{align-content:end;}
+
+/* Very crowded fallback: keep everything visible instead of overflowing. */
+.creature-zone.crowded{
+    grid-template-columns:repeat(4,124px);
+    grid-auto-rows:170px;
+    column-gap:16px;
+    row-gap:8px;
+}
+.creature-zone.crowded .card:not(.land-card):not(.artifact-card){width:124px;height:170px;}
+.land-zone.crowded{grid-template-columns:repeat(3,92px);grid-auto-rows:108px;}
+.land-zone.crowded .land-card{width:92px;height:108px;}
+
+
+
+/* v6.7.9 Clean Zones: one-line player HUD + separated support/resources */
+.player-info{
+    left:24px;
+    top:12px;
+    max-width:calc(100% - 48px);
+    height:34px;
+    line-height:34px;
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    font-size:18px;
+    padding:0 10px;
+    border-radius:9px;
+    background:linear-gradient(90deg,rgba(0,0,0,.46),rgba(0,0,0,.16) 72%,transparent);
+    backdrop-filter:blur(2px);
+}
+.player-info .life,
+.player-info .deck-info{white-space:nowrap;display:inline;}
+
+/* Left rail is now two deliberate shelves: support above, lands below. */
+.player{grid-template-columns:minmax(260px,24%) minmax(0,1fr);}
+
+.artifact-zone{
+    grid-column:1;
+    grid-row:1;
+    align-self:start;
+    justify-self:stretch;
+    min-height:0;
+    height:42%;
+    margin-top:50px;
+    padding:28px 14px 10px;
+    display:flex;
+    flex-wrap:wrap;
+    align-content:flex-start;
+    align-items:flex-start;
+    justify-content:flex-start;
+    gap:10px;
+    border-right:1px solid rgba(255,255,255,.10);
+    border-bottom:1px solid rgba(255,255,255,.12);
+    background:linear-gradient(180deg,rgba(0,0,0,.10),rgba(0,0,0,.22));
+    position:relative;
+}
+.artifact-zone::before{
+    content:"ARTIFACTS / SUPPORT";
+    position:absolute;
+    left:14px;
+    top:8px;
+    font-size:10px;
+    letter-spacing:1.8px;
+    font-weight:800;
+    color:rgba(255,255,255,.40);
+}
+
+.land-zone,
+.player-2 .land-zone{
+    grid-column:1;
+    grid-row:1;
+    align-self:end;
+    justify-self:stretch;
+    height:53%;
+    padding:30px 14px 14px;
+    margin:0;
+    display:flex;
+    flex-wrap:wrap;
+    align-content:flex-end;
+    align-items:flex-end;
+    justify-content:flex-start;
+    gap:12px 10px;
+    border-right:1px solid rgba(255,255,255,.10);
+    border-top:1px solid rgba(255,255,255,.12);
+    background:linear-gradient(0deg,rgba(0,0,0,.20),rgba(0,0,0,.06));
+}
+.player-2 .land-zone{align-content:flex-end;align-items:flex-end;padding-top:30px;padding-bottom:14px;}
+.land-zone .zone-label{
+    left:14px;
+    top:8px;
+    bottom:auto;
+    font-size:10px;
+    letter-spacing:1.8px;
+    font-weight:800;
+    opacity:.40;
+}
+
+/* Keep multi-row land behavior inside the lower shelf. */
+.land-zone.two-rows,
+.player-2 .land-zone.two-rows,
+.player-1 .land-zone.two-rows{
+    display:grid;
+    grid-template-columns:repeat(3,104px);
+    grid-auto-rows:122px;
+    column-gap:10px;
+    row-gap:10px;
+    justify-content:center;
+    align-content:end;
+    padding-top:34px;
+}
+.land-zone.crowded{grid-template-columns:repeat(3,92px);grid-auto-rows:108px;}
+
+/* Support cards stay readable without competing with creatures. */
+.artifact-card{
+    width:104px;
+    height:112px;
+    padding:9px;
+}
+.artifact-card .card-name{font-size:12px;}
+.artifact-card .icon{font-size:30px;}
+
+/* Creature stage keeps the large-TV treatment and the front line. */
+.creature-zone{
+    grid-column:2;
+    grid-row:1;
+    padding-left:26px;
+    padding-right:26px;
+}
+
+@media(max-width:1200px){
+    .player{grid-template-columns:26% 1fr;}
+    .player-info{font-size:16px;}
+    .artifact-zone{padding-left:10px;padding-right:10px;}
+    .land-zone,.player-2 .land-zone{padding-left:10px;padding-right:10px;}
+}
+
+
+
+/* v6.7.10 Five-Land Slots: wider resource rail + safe tapped spacing */
+.player{grid-template-columns:minmax(560px,34%) minmax(0,1fr);}
+
+/* Five lands can sit side-by-side on a normal TV width. */
+.land-zone,
+.player-2 .land-zone,
+.player-1 .land-zone{
+    display:grid;
+    grid-template-columns:repeat(5,96px);
+    grid-auto-rows:116px;
+    column-gap:10px;
+    row-gap:10px;
+    justify-content:start;
+    align-content:end;
+    align-items:center;
+    padding-left:16px;
+    padding-right:16px;
+}
+.land-card{width:96px;height:112px;}
+
+/* Rotated lands stay inside their visual slot instead of colliding with neighbours. */
+.land-zone .land-card.tapped{
+    transform:rotate(90deg) scale(.82);
+    transform-origin:center center;
+}
+
+/* 1-5 lands = one row, 6-10 = two rows, 11+ stays compact in 5 columns. */
+.land-zone.two-rows,
+.player-2 .land-zone.two-rows,
+.player-1 .land-zone.two-rows{
+    display:grid;
+    grid-template-columns:repeat(5,96px);
+    grid-auto-rows:116px;
+    column-gap:10px;
+    row-gap:10px;
+    justify-content:start;
+    align-content:end;
+    padding-top:34px;
+}
+.land-zone.crowded{
+    grid-template-columns:repeat(5,86px);
+    grid-auto-rows:104px;
+    column-gap:8px;
+    row-gap:8px;
+}
+.land-zone.crowded .land-card{width:86px;height:100px;}
+.land-zone.crowded .land-card.tapped{transform:rotate(90deg) scale(.80);}
+
+/* Support shelf follows the same widened rail. */
+.artifact-zone{padding-left:16px;padding-right:16px;gap:12px;}
+
+/* Tapped creatures get a little extra breathing room without shrinking normal cards. */
+.creature-zone{column-gap:34px;}
+.creature-zone .card.tapped:not(.land-card):not(.artifact-card){
+    transform:rotate(90deg) scale(.88);
+    transform-origin:center center;
+}
+
+@media(max-width:1350px){
+    .player{grid-template-columns:minmax(390px,32%) minmax(0,1fr);}
+    .land-zone, .player-2 .land-zone, .player-1 .land-zone,
+    .land-zone.two-rows, .player-2 .land-zone.two-rows, .player-1 .land-zone.two-rows{
+        grid-template-columns:repeat(3,92px);
+        grid-auto-rows:108px;
+    }
+    .land-card{width:92px;height:104px;}
+}
+
+
+
+/* =========================================================
+   v6.7.11 THREE-ZONE ARENA
+   User layout: Lands | Creatures | Artifacts + diverse
+   Same structure for P1 and P2, with HUD outside the zones.
+   ========================================================= */
+.player{
+    display:grid;
+    grid-template-columns:minmax(410px,23%) minmax(0,54%) minmax(300px,23%);
+    grid-template-rows:minmax(0,1fr);
+    gap:14px;
+    padding:12px 14px;
+    overflow:hidden;
+}
+.player-1,.player-2{transform:none;}
+
+/* P2 HUD at the outside/top, P1 HUD at the outside/bottom. */
+.player-info{
+    left:24px;
+    right:auto;
+    width:auto;
+    max-width:calc(100% - 48px);
+    height:34px;
+    line-height:34px;
+    padding:0 10px;
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    z-index:30;
+    font-size:18px;
+    border-radius:9px;
+    background:linear-gradient(90deg,rgba(0,0,0,.50),rgba(0,0,0,.16) 72%,transparent);
+}
+.player-2 .player-info{top:10px;bottom:auto;}
+.player-1 .player-info{top:auto;bottom:10px;}
+
+/* Three permanent zones. */
+.land-zone,
+.player-1 .land-zone,
+.player-2 .land-zone{
+    grid-column:1;
+    grid-row:1;
+    position:relative;
+    width:100%;
+    height:100%;
+    margin:0;
+    padding:54px 12px 16px;
+    display:grid;
+    grid-template-columns:repeat(5,minmax(0,1fr));
+    grid-auto-rows:104px;
+    column-gap:6px;
+    row-gap:8px;
+    justify-items:center;
+    align-content:start;
+    align-items:center;
+    border:1px solid rgba(255,255,255,.11);
+    background:linear-gradient(180deg,rgba(0,0,0,.13),rgba(0,0,0,.25));
+    border-radius:10px;
+    z-index:6;
+}
+.player-1 .land-zone{padding-top:16px;padding-bottom:54px;align-content:end;}
+.land-zone .zone-label{
+    left:12px;
+    top:10px;
+    bottom:auto;
+    font-size:10px;
+    letter-spacing:1.8px;
+    font-weight:800;
+    opacity:.46;
+}
+.player-1 .land-zone .zone-label{top:auto;bottom:10px;}
+.land-card{
+    width:76px;
+    height:92px;
+    padding:7px;
+    border-radius:9px;
+}
+.land-card .icon{font-size:24px;}
+.land-card .card-name{font-size:10px;}
+.land-card .stats{font-size:10px;}
+.land-zone .land-card.tapped{
+    transform:rotate(90deg) scale(.78);
+    transform-origin:center center;
+}
+/* Five lands per row; 6+ automatically continue on the next row. */
+.land-zone.two-rows,
+.player-1 .land-zone.two-rows,
+.player-2 .land-zone.two-rows,
+.land-zone.crowded{
+    display:grid;
+    grid-template-columns:repeat(5,minmax(0,1fr));
+    grid-auto-rows:104px;
+    column-gap:6px;
+    row-gap:8px;
+    justify-items:center;
+}
+.land-zone.crowded .land-card{width:72px;height:88px;}
+.land-zone.crowded .land-card.tapped{transform:rotate(90deg) scale(.76);}
+
+.creature-zone,
+.player-1 .creature-zone,
+.player-2 .creature-zone{
+    grid-column:2;
+    grid-row:1;
+    width:100%;
+    height:100%;
+    min-width:0;
+    padding:48px 20px 48px;
+    display:flex;
+    flex-wrap:wrap;
+    align-content:center;
+    align-items:center;
+    justify-content:center;
+    gap:20px 24px;
+    border:1px solid rgba(255,255,255,.08);
+    background:linear-gradient(180deg,rgba(0,0,0,.035),rgba(0,0,0,.10));
+    border-radius:10px;
+    z-index:6;
+}
+/* Keep creatures large; two-row mode stays large enough for TV. */
+.creature-zone .card:not(.land-card):not(.artifact-card){
+    width:178px;
+    height:244px;
+    border-radius:15px;
+    padding:12px;
+}
+.creature-zone .card:not(.land-card):not(.artifact-card) .icon{font-size:64px;}
+.creature-zone .card:not(.land-card):not(.artifact-card) .card-name{font-size:17px;}
+.creature-zone .card:not(.land-card):not(.artifact-card) .stats{font-size:23px;}
+.creature-zone.two-rows{
+    display:grid;
+    grid-template-columns:repeat(4,178px);
+    grid-auto-rows:244px;
+    column-gap:20px;
+    row-gap:12px;
+    justify-content:center;
+    align-content:center;
+}
+.creature-zone.crowded{
+    display:grid;
+    grid-template-columns:repeat(4,150px);
+    grid-auto-rows:206px;
+    column-gap:16px;
+    row-gap:10px;
+    justify-content:center;
+    align-content:center;
+}
+.creature-zone.crowded .card:not(.land-card):not(.artifact-card){width:150px;height:206px;}
+.creature-zone .card.tapped:not(.land-card):not(.artifact-card){
+    transform:rotate(90deg) scale(.82);
+    transform-origin:center center;
+}
+
+.artifact-zone,
+.player-1 .artifact-zone,
+.player-2 .artifact-zone{
+    grid-column:3;
+    grid-row:1;
+    position:relative;
+    width:100%;
+    height:100%;
+    margin:0;
+    padding:54px 14px 16px;
+    display:flex;
+    flex-wrap:wrap;
+    align-content:flex-start;
+    align-items:flex-start;
+    justify-content:flex-start;
+    gap:10px;
+    border:1px solid rgba(255,255,255,.11);
+    background:linear-gradient(180deg,rgba(0,0,0,.12),rgba(0,0,0,.24));
+    border-radius:10px;
+    z-index:6;
+    pointer-events:auto;
+}
+.player-1 .artifact-zone{padding-top:16px;padding-bottom:54px;align-content:flex-end;}
+.artifact-zone::before{
+    content:"ARTIFACTS + DIVERSE";
+    position:absolute;
+    left:14px;
+    top:10px;
+    font-size:10px;
+    letter-spacing:1.7px;
+    font-weight:800;
+    color:rgba(255,255,255,.46);
+}
+.player-1 .artifact-zone::before{top:auto;bottom:10px;}
+.artifact-card{width:102px;height:112px;padding:8px;}
+.artifact-card .card-name{font-size:11px;}
+.artifact-card .icon{font-size:30px;}
+
+/* Realm art remains behind all three zones. */
+.player .realm-art,.player .realm-particles,.player .realm-label{pointer-events:none;}
+.player::after{background:linear-gradient(90deg,rgba(0,0,0,.10),transparent 28%,transparent 72%,rgba(0,0,0,.10));}
+
+@media(max-width:1500px){
+    .player{grid-template-columns:minmax(350px,24%) minmax(0,52%) minmax(270px,24%);}
+    .creature-zone .card:not(.land-card):not(.artifact-card){width:156px;height:214px;}
+    .creature-zone .card:not(.land-card):not(.artifact-card) .icon{font-size:54px;}
+    .creature-zone.two-rows{grid-template-columns:repeat(4,156px);grid-auto-rows:214px;}
+}
+
 </style>
 
 </head>
@@ -480,8 +1278,24 @@ body {
 
 
 <section
-    class="player player-2"
+    class="player player-2 theme-red"
 >
+<div class="realm-art" aria-hidden="true">
+  <svg class="realm-svg red-scene" viewBox="0 0 1600 420" preserveAspectRatio="none">
+    <defs>
+      <linearGradient id="lavaGlowTop" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffb347"/><stop offset=".45" stop-color="#ff4d12"/><stop offset="1" stop-color="#5a0905"/></linearGradient>
+      <filter id="lavaBlurTop"><feGaussianBlur stdDeviation="8"/></filter>
+    </defs>
+    <ellipse cx="820" cy="355" rx="420" ry="85" fill="#ff3b0b" opacity=".22" filter="url(#lavaBlurTop)"/>
+    <path d="M0 305 L150 215 L255 270 L390 135 L510 255 L630 185 L760 285 L930 115 L1085 262 L1200 175 L1320 252 L1450 150 L1600 285 L1600 420 L0 420 Z" fill="#120607" opacity=".84"/>
+    <path d="M0 335 L180 275 L335 332 L515 225 L665 334 L820 265 L990 338 L1165 245 L1325 325 L1490 250 L1600 310 L1600 420 L0 420 Z" fill="#060304"/>
+    <path d="M390 135 L410 190 L436 210 L455 252" stroke="url(#lavaGlowTop)" stroke-width="6" fill="none" opacity=".85"/>
+    <path d="M930 115 L944 172 L969 204 L984 250" stroke="url(#lavaGlowTop)" stroke-width="7" fill="none" opacity=".9"/>
+    <path d="M1450 150 L1460 190 L1482 218 L1491 252" stroke="url(#lavaGlowTop)" stroke-width="5" fill="none" opacity=".78"/>
+  </svg>
+  <svg class="realm-svg green-scene" viewBox="0 0 1600 420" preserveAspectRatio="none"><path d="M0 420V270l55-88 28 88 45-135 42 135 62-92 42 92 55-155 48 155 54-112 46 112 67-170 52 170 56-106 44 106 62-152 48 152 65-96 44 96 62-145 49 145 67-120 49 120 70-164 52 164 70-98 48 98 64-142 49 142 70-110 55 110 67-153 49 153 52-83 45 83v150z" fill="#04110b" opacity=".92"/></svg>
+</div>
+<div class="realm-badge" aria-hidden="true">P2</div>
 
 <div class="player-info">
 
@@ -525,15 +1339,6 @@ PLAYER 2
 
 
 <div
-    class="creature-zone"
-    id="player2Creatures"
->
-</div>
-
-
-<div class="artifact-zone" id="player2Artifacts"></div>
-
-<div
     class="land-zone"
     id="player2Lands"
 >
@@ -542,6 +1347,15 @@ PLAYER 2
 LANDS
 </div>
 
+</div>
+
+
+<div class="artifact-zone" id="player2Artifacts"></div>
+
+<div
+    class="creature-zone"
+    id="player2Creatures"
+>
 </div>
 
 </section>
@@ -586,8 +1400,21 @@ BATTLEFIELD
 <div class="bf-phase-tracker" id="bfPhaseTracker"><div class="bf-major" id="bfMajor"></div><div class="bf-steps" id="bfSteps"></div></div>
 
 <section
-    class="player player-1"
+    class="player player-1 theme-green"
 >
+<div class="realm-art" aria-hidden="true">
+  <svg class="realm-svg red-scene" viewBox="0 0 1600 420" preserveAspectRatio="none">
+    <path d="M0 420V330L140 250 260 315 400 180 525 305 650 238 800 320 950 175 1090 300 1225 220 1360 305 1490 205 1600 290V420Z" fill="#090304" opacity=".92"/>
+    <path d="M400 180L420 235 445 260" stroke="#ff4b11" stroke-width="6"/><path d="M950 175L965 225 995 265" stroke="#ff4b11" stroke-width="7"/>
+  </svg>
+  <svg class="realm-svg green-scene" viewBox="0 0 1600 420" preserveAspectRatio="none">
+    <defs><linearGradient id="mistGreenBottom" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#84ffd0" stop-opacity="0"/><stop offset="1" stop-color="#42d88e" stop-opacity=".18"/></linearGradient></defs>
+    <path d="M0 420V250l45-84 30 84 42-132 44 132 58-88 42 88 58-155 48 155 55-104 44 104 66-176 52 176 58-100 42 100 60-160 50 160 64-92 45 92 62-148 48 148 67-118 48 118 68-168 52 168 72-96 47 96 65-146 48 146 70-105 54 105 66-158 50 158 57-82 43 82v170z" fill="#04110b" opacity=".96"/>
+    <path d="M0 420V320l80-55 60 55 85-82 75 82 92-68 80 68 95-91 78 91 94-62 76 62 100-88 78 88 94-65 73 65 96-82 81 82 96-60 76 60 102-86 81 86v100z" fill="#020906" opacity=".98"/>
+    <rect x="0" y="210" width="1600" height="210" fill="url(#mistGreenBottom)"/>
+  </svg>
+</div>
+<div class="realm-badge" aria-hidden="true">P1</div>
 
 <div class="player-info">
 
@@ -807,10 +1634,36 @@ function renderBattlefieldPhaseTracker(state){
  b.innerHTML=u.map((x,i)=>`<span class="${i<ai?'done':i===ai?'active':''}">${i<ai?'✓ ':''}${x[1]}</span>`).join('');
 }
 
+function getRealmTheme(deckChoice) {
+    if (!deckChoice) return "neutral";
+    let text = "";
+    try {
+        text = typeof deckChoice === "string" ? deckChoice : JSON.stringify(deckChoice);
+    } catch (e) {
+        text = String(deckChoice);
+    }
+    text = text.toLowerCase();
+    if (text.includes("burn") || text.includes("mountain") || text.includes("red") || text.includes("legion")) return "red";
+    if (text.includes("forest") || text.includes("green") || text.includes("fury")) return "green";
+    return "neutral";
+}
+
+function applyRealmThemes(state) {
+    const choices = state && state.selectedDecks ? state.selectedDecks : {};
+    [1,2].forEach(playerNumber => {
+        const section = document.querySelector(`.player-${playerNumber}`);
+        if (!section) return;
+        const theme = getRealmTheme(choices[playerNumber]);
+        section.classList.remove("theme-red","theme-green","theme-neutral");
+        section.classList.add(`theme-${theme}`);
+    });
+}
+
 function renderGameState(
     state
 ) {
 
+    applyRealmThemes(state);
     renderBattlefieldPhaseTracker(state);
 
     document
@@ -925,6 +1778,15 @@ function renderPlayer(
         document.getElementById(
             `player${playerNumber}Lands`
         );
+
+
+    // v6.7.8: switch automatically to compact multi-row layouts as zones fill.
+    const creatureCount = Array.isArray(player.creatures) ? player.creatures.length : 0;
+    const landCount = Array.isArray(player.lands) ? player.lands.length : 0;
+    creatureArea.classList.toggle("two-rows", creatureCount >= 5);
+    creatureArea.classList.toggle("crowded", creatureCount >= 9);
+    landArea.classList.toggle("two-rows", landCount >= 6);
+    landArea.classList.toggle("crowded", landCount >= 11);
 
 
     creatureArea.innerHTML = "";
