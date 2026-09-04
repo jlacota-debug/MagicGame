@@ -1493,7 +1493,14 @@ LANDS
 
 <script>
 
-const socket = io();
+// TV compatibility: force HTTP long-polling instead of WebSocket.
+const socket = io({
+    transports: ["polling"],
+    upgrade: false,
+    reconnection: true,
+    reconnectionAttempts: Infinity,
+    reconnectionDelay: 1000
+});
 
 function getSpellEffectText(card) {
     if (!card) return "✨";
