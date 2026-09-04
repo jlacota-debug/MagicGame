@@ -2085,6 +2085,38 @@ function checkWinner() {
 }
 
 
+
+// ======================================================
+// TV EVENT BUFFER (v6.7.17)
+// ======================================================
+// Smart-TV clients use plain HTTP, so transient Socket.IO events would
+// otherwise be missed. Keep a short numbered buffer for read-only TV clients.
+const tvEventBuffer = [];
+let tvEventSequence = 0;
+const tvEventTypes = new Set(["combatResolved", "spellCast", "spellResolved", "gameOver"]);
+
+function rememberTvEvent(type, data) {
+    tvEventSequence += 1;
+    tvEventBuffer.push({
+        id: tvEventSequence,
+        type,
+        data,
+        time: Date.now()
+    });
+    if (tvEventBuffer.length > 100) {
+        tvEventBuffer.splice(0, tvEventBuffer.length - 100);
+    }
+}
+
+// Record selected application broadcasts without changing phone Socket.IO behavior.
+const originalIoEmit = io.emit.bind(io);
+io.emit = function (eventName, data) {
+    if (tvEventTypes.has(eventName)) {
+        rememberTvEvent(eventName, data);
+    }
+    return originalIoEmit(eventName, data);
+};
+
 // ======================================================
 // TV HTTP FALLBACK
 // ======================================================
@@ -2096,6 +2128,19 @@ app.get("/api/game-state", (req, res) => {
     res.set("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
     res.set("Pragma", "no-cache");
     res.set("Expires", "0");
+
+    // Backwards compatible: old TV clients still receive the raw state.
+    // v6.7.17 clients send ?since=<event id> and also receive missed transient events.
+    if (typeof req.query.since !== "undefined") {
+        const since = Math.max(0, Number(req.query.since) || 0);
+        res.json({
+            state: getPublicGameState(),
+            events: tvEventBuffer.filter(event => event.id > since),
+            latestEventId: tvEventSequence
+        });
+        return;
+    }
+
     res.json(getPublicGameState());
 });
 
