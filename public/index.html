@@ -1274,6 +1274,33 @@ body { overflow: hidden; }
   #tvFitShell { position: relative; width: 100%; height: auto; transform: none !important; }
 }
 
+
+/* v6.7.16 TV Viewport Fit: fixed 1920x1080 canvas scaled to the actually visible browser viewport */
+#tvFitShell {
+    width: 1920px;
+    height: 1080px;
+    overflow: hidden;
+}
+#tvFitShell > .battlefield {
+    width: 1920px !important;
+    height: 1080px !important;
+    min-height: 1080px !important;
+    max-height: 1080px !important;
+}
+@media (max-width: 900px) {
+  #tvFitShell {
+      width: 100%;
+      height: auto;
+      overflow: visible;
+  }
+  #tvFitShell > .battlefield {
+      width: 100% !important;
+      height: auto !important;
+      min-height: 100vh !important;
+      max-height: none !important;
+  }
+}
+
 </style>
 
 </head>
@@ -1515,6 +1542,7 @@ LANDS
     var lastState = null;
     var requestInFlight = false;
     var pollTimer = null;
+    var lastEventId = 0;
 
     function text(id, value) {
         var el = document.getElementById(id);
@@ -1731,6 +1759,71 @@ LANDS
         }
     }
 
+
+    function showTvMessage(message) {
+        var el = document.getElementById('message');
+        if (!el || !message) { return; }
+        el.innerHTML = '';
+        el.appendChild(document.createTextNode(String(message)));
+        el.className = '';
+        /* Force reflow so repeated events replay the animation. */
+        void el.offsetWidth;
+        el.className = 'show';
+    }
+
+    function showSpellFx(data) {
+        var fx = document.getElementById('spellFx');
+        var card = data && data.card ? data.card : null;
+        var label = '';
+        if (!fx || !card) { return; }
+        if (card.name === 'Shock') { label = '🔥 2 DAMAGE'; }
+        else if (card.name === 'Fireball') { label = '🔥 DAMAGE'; }
+        else if (card.name === 'Giant Growth') { label = '🌿 +3/+3'; }
+        else if (card.name === 'Strength Seed') { label = '➕ +1/+1'; }
+        else { label = card.name || 'SPELL'; }
+        fx.innerHTML = '';
+        fx.appendChild(document.createTextNode(label));
+        fx.className = '';
+        void fx.offsetWidth;
+        fx.className = 'cast';
+    }
+
+    function handleTvEvent(event) {
+        var data, message;
+        if (!event) { return; }
+        data = event.data || {};
+        if (event.type === 'combatResolved') {
+            message = data.messages && data.messages.length ? data.messages.join(' ') : 'Combat resolved.';
+            showTvMessage(message);
+        } else if (event.type === 'spellCast') {
+            if (data.message) { showTvMessage(data.message); }
+        } else if (event.type === 'spellResolved') {
+            showSpellFx(data);
+            if (data.message) { showTvMessage(data.message); }
+        } else if (event.type === 'gameOver') {
+            if (data.message) { showTvMessage(data.message); }
+        }
+        if (Number(event.id) > lastEventId) { lastEventId = Number(event.id); }
+    }
+
+    function handlePollPayload(payload) {
+        var state, events, i;
+        if (payload && payload.state) {
+            state = payload.state;
+            events = payload.events || [];
+            renderGameState(state);
+            for (i = 0; i < events.length; i += 1) {
+                handleTvEvent(events[i]);
+            }
+            if (Number(payload.latestEventId) > lastEventId && events.length === 0) {
+                lastEventId = Number(payload.latestEventId);
+            }
+        } else {
+            /* Compatibility with the older raw-state endpoint. */
+            renderGameState(payload);
+        }
+    }
+
     function poll() {
         var xhr;
         if (requestInFlight) { return; }
@@ -1741,11 +1834,11 @@ LANDS
                 if (xhr.readyState === 4) {
                     requestInFlight = false;
                     if (xhr.status >= 200 && xhr.status < 300) {
-                        try { renderGameState(JSON.parse(xhr.responseText)); } catch (ignore) {}
+                        try { handlePollPayload(JSON.parse(xhr.responseText)); } catch (ignore) {}
                     }
                 }
             };
-            xhr.open('GET', '/api/game-state?t=' + new Date().getTime(), true);
+            xhr.open('GET', '/api/game-state?since=' + lastEventId + '&t=' + new Date().getTime(), true);
             xhr.setRequestHeader('Cache-Control', 'no-cache');
             xhr.send(null);
         } catch (e) { requestInFlight = false; }
@@ -1765,10 +1858,29 @@ LANDS
     var w=window.innerWidth||document.documentElement.clientWidth||1920;
     var h=window.innerHeight||document.documentElement.clientHeight||1080;
     if(w<=900){ shell.style.transform="none"; shell.style.left="0px"; shell.style.top="0px"; return; }
-    var scale=Math.min(w/1920,h/1080);
+    /* Use the browser's actually visible content area. visualViewport is
+       preferred when available because browser chrome/top bars can reduce it. */
+    var vv=window.visualViewport;
+    var visibleW=vv && vv.width ? vv.width : w;
+    var visibleH=vv && vv.height ? vv.height : h;
+
+    /* documentElement.clientHeight is a useful fallback on older TV browsers. */
+    if(document.documentElement){
+      if(document.documentElement.clientWidth && document.documentElement.clientWidth < visibleW){
+        visibleW=document.documentElement.clientWidth;
+      }
+      if(document.documentElement.clientHeight && document.documentElement.clientHeight < visibleH){
+        visibleH=document.documentElement.clientHeight;
+      }
+    }
+
+    var scale=Math.min(visibleW/1920,visibleH/1080);
+    if(scale>1) scale=1;
+
+    shell.style.transformOrigin="top left";
     shell.style.transform="scale("+scale+")";
-    shell.style.left=Math.max(0,(w-1920*scale)/2)+"px";
-    shell.style.top=Math.max(0,(h-1080*scale)/2)+"px";
+    shell.style.left=Math.max(0,(visibleW-1920*scale)/2)+"px";
+    shell.style.top="0px";
   }
   if(window.addEventListener){ window.addEventListener("resize",fitTV,false); }
   else if(window.attachEvent){ window.attachEvent("onresize",fitTV); }
