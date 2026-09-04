@@ -1488,785 +1488,255 @@ LANDS
 <div id="spellFx"></div>
 
 
-<script src="/socket.io/socket.io.js"></script>
-
-
 <script>
+/* =========================================================
+   v6.7.13 SMART-TV HTTP CLIENT
+   ES5-only display client for older Smart-TV browsers.
+   No Socket.IO is required on the TV battlefield.
+   ========================================================= */
+(function () {
+    var lastState = null;
+    var requestInFlight = false;
+    var pollTimer = null;
 
-// TV compatibility: force HTTP long-polling instead of WebSocket.
-const socket = io({
-    transports: ["polling"],
-    upgrade: false,
-    reconnection: true,
-    reconnectionAttempts: Infinity,
-    reconnectionDelay: 1000
-});
-
-function getSpellEffectText(card) {
-    if (!card) return "✨";
-    if (card.effect === "damage") return `${card.icon || "🔥"} ${Number(card.damage || 0)} DAMAGE`;
-    if (card.effect === "pump") return `${card.icon || "🌿"} +${Number(card.powerBonus || 0)}/+${Number(card.toughnessBonus || 0)}`;
-    if (card.effect === "plus1_counter") {
-        const n = Number(card.counters || 1);
-        return `${card.icon || "➕"} +${n}/+${n} COUNTER`;
+    function text(id, value) {
+        var el = document.getElementById(id);
+        if (el) { el.innerHTML = String(value); }
     }
-    if (card.effect === "draw_cards") return `${card.icon || "📚"} DRAW ${Number(card.amount || 1)}`;
-    if (card.effect === "discard_cards") return `${card.icon || "🧠"} DISCARD ${Number(card.amount || 1)}`;
-    return `${card.icon || "✨"} ${card.name || "SPELL"}`;
-}
 
+    function clearNode(el) {
+        while (el && el.firstChild) { el.removeChild(el.firstChild); }
+    }
 
-socket.on(
-    "gameState",
-    state => {
+    function addMark(card, label) {
+        var d = document.createElement('div');
+        d.className = 'ability-mark';
+        d.appendChild(document.createTextNode(label));
+        card.appendChild(d);
+    }
 
-        const stackDisplay = document.getElementById("stackDisplay");
-        const stack = state.stack || [];
-        if (stack.length) {
-            stackDisplay.style.display = "block";
-            stackDisplay.innerHTML = "STACK<br>" + stack.slice().reverse().map((item, i) => {
-                const effect = item.card && item.card.type === "spell" ? ` · ${getSpellEffectText(item.card)}` : "";
-                return `${i === 0 ? "⬆️" : "•"} ${item.card.icon || "✨"} ${item.card.name}${effect} · P${item.caster}`;
-            }).join("<br>") + `<br><small>Priority: P${state.priorityPlayer}</small>`;
-        } else {
-            stackDisplay.style.display = "none";
+    function hasAbility(creature, ability) {
+        var a = creature && creature.abilities;
+        var i;
+        if (!a || !a.length) { return false; }
+        for (i = 0; i < a.length; i += 1) {
+            if (a[i] === ability) { return true; }
         }
+        return false;
+    }
 
-        renderGameState(
-            state
-        );
-        if (state.gameOver) {
-            showGameOver({ winner: state.winner, loser: state.loser, reason: state.gameOverReason });
-        } else {
-            const overlay = document.getElementById("gameOverOverlay");
-            if (overlay) overlay.classList.remove("show");
+    function makeCard(className, name, icon, stats) {
+        var card = document.createElement('div');
+        var nameEl = document.createElement('div');
+        var iconEl = document.createElement('div');
+        var statsEl = document.createElement('div');
+        card.className = className;
+        nameEl.className = 'card-name';
+        iconEl.className = 'icon';
+        statsEl.className = 'stats';
+        nameEl.appendChild(document.createTextNode(name || ''));
+        iconEl.appendChild(document.createTextNode(icon || ''));
+        statsEl.appendChild(document.createTextNode(stats || ''));
+        card.appendChild(nameEl);
+        card.appendChild(iconEl);
+        card.appendChild(statsEl);
+        return card;
+    }
+
+    function renderLands(playerNumber, player) {
+        var area = document.getElementById('player' + playerNumber + 'Lands');
+        var labels, keep, i, land, card;
+        if (!area) { return; }
+        labels = area.getElementsByClassName ? area.getElementsByClassName('zone-label') : [];
+        keep = labels && labels.length ? labels[0] : null;
+        clearNode(area);
+        if (keep) { area.appendChild(keep); }
+        area.className = 'land-zone';
+        if (player.lands && player.lands.length > 5) { area.className += ' two-rows'; }
+        if (player.lands && player.lands.length > 10) { area.className += ' crowded'; }
+        for (i = 0; player.lands && i < player.lands.length; i += 1) {
+            land = player.lands[i];
+            card = makeCard('card land-card' + (land.tapped ? ' tapped' : ''), land.name, land.icon || '◆', 'MANA');
+            area.appendChild(card);
         }
     }
-);
 
-
-socket.on(
-    "combatMessage",
-    data => {
-
-        showMessage(
-            data.text
-        );
+    function renderArtifacts(playerNumber, player) {
+        var area = document.getElementById('player' + playerNumber + 'Artifacts');
+        var i, artifact, card;
+        if (!area) { return; }
+        clearNode(area);
+        for (i = 0; player.artifacts && i < player.artifacts.length; i += 1) {
+            artifact = player.artifacts[i];
+            card = makeCard('card artifact-card' + (artifact.tapped ? ' tapped' : ''), artifact.name, artifact.icon || '⚙', 'ARTIFACT');
+            area.appendChild(card);
+        }
+        /* Enchantments are public permanents too; show them in the diverse zone. */
+        for (i = 0; player.enchantments && i < player.enchantments.length; i += 1) {
+            artifact = player.enchantments[i];
+            card = makeCard('card artifact-card', artifact.name, artifact.icon || '✦', 'ENCHANT');
+            area.appendChild(card);
+        }
     }
-);
 
-
-socket.on(
-    "combatResolved",
-    data => {
-
-        showMessage(
-            data.messages.join(
-                " "
-            )
-        );
+    function isAttacker(state, playerNumber, id) {
+        var arr, i;
+        if (!state.combat || Number(playerNumber) !== Number(state.currentPlayer)) { return false; }
+        arr = state.combat.attackerIds || [];
+        for (i = 0; i < arr.length; i += 1) { if (arr[i] === id) { return true; } }
+        return false;
     }
-);
 
-
-socket.on("spellCast", data => {
-    showMessage(data.message);
-});
-
-socket.on(
-    "spellResolved",
-    data => {
-        const fx = document.getElementById("spellFx");
-        fx.textContent = getSpellEffectText(data.card);
-        fx.classList.remove("cast");
-        void fx.offsetWidth;
-        fx.classList.add("cast");
-
-        if (data.target && data.target.type === "creature") {
-            const target = document.querySelector(`[data-creature-id="${data.target.id}"]`);
-            if (target) {
-                target.classList.remove("spell-hit");
-                void target.offsetWidth;
-                target.classList.add("spell-hit");
+    function isBlocker(state, id) {
+        var blockers, key, arr, i;
+        if (!state.combat) { return false; }
+        blockers = state.combat.blockers || {};
+        for (key in blockers) {
+            if (blockers.hasOwnProperty(key)) {
+                arr = blockers[key] || [];
+                for (i = 0; i < arr.length; i += 1) { if (arr[i] === id) { return true; } }
             }
-        } else if (data.target && data.target.type === "player") {
-            const section = document.querySelector(`.player-${data.target.player}`);
-            if (section) {
-                section.classList.remove("player-hit");
-                void section.offsetWidth;
-                section.classList.add("player-hit");
-            }
         }
-
-        showMessage(data.message);
+        return false;
     }
-);
 
-
-function showGameOver(data) {
-    const overlay = document.getElementById("gameOverOverlay");
-    if (!overlay) return;
-    const winner = Number(data.winner || 0);
-    document.getElementById("gameOverKicker").textContent = winner ? "🏆 VICTORY" : "⚔️ GAME OVER";
-    document.getElementById("gameOverTitle").textContent = winner ? `PLAYER ${winner} WINS` : "DRAW";
-    document.getElementById("gameOverReason").textContent = data.reason || "Kampen er slut.";
-    overlay.classList.add("show");
-}
-
-socket.on("gameOver", showGameOver);
-
-socket.on("gameReset", () => {
-    const overlay = document.getElementById("gameOverOverlay");
-    if (overlay) overlay.classList.remove("show");
-});
-
-
-// ======================================================
-// RENDER
-// ======================================================
-
-
-function renderBattlefieldPhaseTracker(state){
- const step=state.turnStep||state.phase;
- const groups=[
- {name:"BEGINNING",steps:[["untap","Untap"],["upkeep","Upkeep"],["draw","Draw"]]},
- {name:"MAIN PHASE 1",steps:[["main1","Main 1"],["main","Main 1"]]},
- {name:"COMBAT",steps:[["begin_combat","Beginning"],["declare_attackers","Attackers"],["choose_attackers","Attackers"],["declare_blockers","Blockers"],["choose_blockers","Blockers"],["combat_damage","Damage"],["end_combat","End"]]},
- {name:"MAIN PHASE 2",steps:[["main2","Main 2"]]},
- {name:"ENDING",steps:[["end_step","End"],["cleanup","Cleanup"]]}];
- let gi=groups.findIndex(g=>g.steps.some(x=>x[0]===step)); if(gi<0)gi=0;
- const a=document.getElementById('bfMajor'),b=document.getElementById('bfSteps'); if(!a||!b)return;
- a.innerHTML=groups.map((g,i)=>`<span class="${i<gi?'done':i===gi?'active':''}">${i<gi?'✓ ':''}${g.name}</span>`).join('');
- const u=[];groups[gi].steps.forEach(x=>{if(!u.some(y=>y[1]===x[1]))u.push(x)});let ai=u.findIndex(x=>groups[gi].steps.filter(y=>y[1]===x[1]).some(y=>y[0]===step));
- b.innerHTML=u.map((x,i)=>`<span class="${i<ai?'done':i===ai?'active':''}">${i<ai?'✓ ':''}${x[1]}</span>`).join('');
-}
-
-function getRealmTheme(deckChoice) {
-    if (!deckChoice) return "neutral";
-    let text = "";
-    try {
-        text = typeof deckChoice === "string" ? deckChoice : JSON.stringify(deckChoice);
-    } catch (e) {
-        text = String(deckChoice);
-    }
-    text = text.toLowerCase();
-    if (text.includes("burn") || text.includes("mountain") || text.includes("red") || text.includes("legion")) return "red";
-    if (text.includes("forest") || text.includes("green") || text.includes("fury")) return "green";
-    return "neutral";
-}
-
-function applyRealmThemes(state) {
-    const choices = state && state.selectedDecks ? state.selectedDecks : {};
-    [1,2].forEach(playerNumber => {
-        const section = document.querySelector(`.player-${playerNumber}`);
-        if (!section) return;
-        const theme = getRealmTheme(choices[playerNumber]);
-        section.classList.remove("theme-red","theme-green","theme-neutral");
-        section.classList.add(`theme-${theme}`);
-    });
-}
-
-function renderGameState(
-    state
-) {
-
-    applyRealmThemes(state);
-    renderBattlefieldPhaseTracker(state);
-
-    document
-        .getElementById(
-            "turnPlayer"
-        )
-        .textContent =
-        "PLAYER " +
-        state.currentPlayer;
-
-
-    document
-        .getElementById(
-            "turnNumber"
-        )
-        .textContent =
-        state.turnNumber;
-
-
-    const phases = {
-        opening_hand: "OPENING HAND",
-        untap: "UNTAP STEP",
-        upkeep: "UPKEEP STEP",
-        draw: "DRAW STEP",
-        main: "PRECOMBAT MAIN",
-        begin_combat: "BEGINNING OF COMBAT",
-        choose_attackers: "DECLARE ATTACKERS",
-        choose_blockers: "DECLARE BLOCKERS",
-        combat_damage: "COMBAT DAMAGE",
-        end_combat: "END OF COMBAT",
-        main2: "MAIN PHASE 2",
-        end_step: "END STEP",
-        cleanup: "CLEANUP STEP"
-    };
-
-
-    document
-        .getElementById(
-            "phaseText"
-        )
-        .textContent =
-        phases[
-            state.phase
-        ];
-
-
-    renderPlayer(
-        1,
-        state.players[1],
-        state
-    );
-
-
-    renderPlayer(
-        2,
-        state.players[2],
-        state
-    );
-}
-
-
-function renderPlayer(
-    playerNumber,
-    player,
-    state
-) {
-
-    document
-        .getElementById(
-            `p${playerNumber}Life`
-        )
-        .textContent =
-        player.life;
-
-
-    document
-        .getElementById(
-            `p${playerNumber}Hand`
-        )
-        .textContent =
-        player.handCount;
-
-
-    document
-        .getElementById(
-            `p${playerNumber}Deck`
-        )
-        .textContent =
-        player.libraryCount;
-
-
-    document
-        .getElementById(
-            `p${playerNumber}Grave`
-        )
-        .textContent =
-        player.graveyardCount || 0;
-
-    const exileCount =
-        player.exile
-            ? player.exile.length
-            : 0;
-
-
-    const creatureArea =
-        document.getElementById(
-            `player${playerNumber}Creatures`
-        );
-
-
-    const landArea =
-        document.getElementById(
-            `player${playerNumber}Lands`
-        );
-
-
-    // v6.7.8: switch automatically to compact multi-row layouts as zones fill.
-    const creatureCount = Array.isArray(player.creatures) ? player.creatures.length : 0;
-    const landCount = Array.isArray(player.lands) ? player.lands.length : 0;
-    creatureArea.classList.toggle("two-rows", creatureCount >= 5);
-    creatureArea.classList.toggle("crowded", creatureCount >= 9);
-    landArea.classList.toggle("two-rows", landCount >= 6);
-    landArea.classList.toggle("crowded", landCount >= 11);
-
-
-    creatureArea.innerHTML = "";
-
-
-    landArea
-        .querySelectorAll(
-            ".card"
-        )
-        .forEach(
-            element =>
-                element.remove()
-        );
-
-
-    const artifactArea =
-        document.getElementById(
-            `player${playerNumber}Artifacts`
-        );
-
-    artifactArea.innerHTML = "";
-
-    (player.artifacts || []).forEach(
-        artifact => {
-            const element = document.createElement("div");
-            element.className = "card artifact-card";
-            if (artifact.tapped) element.classList.add("tapped");
-
-            element.innerHTML = `
-                <div class="card-name">${artifact.name}</div>
-                <div class="icon">${artifact.icon || "⚙️"}</div>
-                ${artifact.activatedAbility
-                    ? `<div class="ability-mark">${
-                        artifact.activatedAbility.cost === "sacrifice_creature"
-                            ? "💀 SAC CREATURE → +3 LIFE"
-                            : "⚡ TAP → +1 LIFE"
-                    }</div>`
-                    : ""}
-                <div class="ability-mark">${artifact.tapped ? "↻ TAPPED" : "⚙️ ARTIFACT"}</div>
-            `;
-
-            artifactArea.appendChild(element);
+    function renderCreatures(playerNumber, player, state) {
+        var area = document.getElementById('player' + playerNumber + 'Creatures');
+        var i, c, card, cls;
+        if (!area) { return; }
+        clearNode(area);
+        area.className = 'creature-zone';
+        if (player.creatures && player.creatures.length > 4) { area.className += ' two-rows'; }
+        if (player.creatures && player.creatures.length > 8) { area.className += ' crowded'; }
+        for (i = 0; player.creatures && i < player.creatures.length; i += 1) {
+            c = player.creatures[i];
+            cls = 'card';
+            if (c.tapped) { cls += ' tapped'; }
+            if (isAttacker(state, playerNumber, c.id)) { cls += ' attacking'; }
+            if (isBlocker(state, c.id)) { cls += ' blocking'; }
+            card = makeCard(cls, c.name, c.icon || '●', String(Number(c.power || 0)) + '/' + String(Number(c.toughness || 0)));
+            if (hasAbility(c,'trample')) { addMark(card,'TRAMPLE'); }
+            if (hasAbility(c,'first_strike')) { addMark(card,'FIRST STRIKE'); }
+            if (hasAbility(c,'double_strike')) { addMark(card,'DOUBLE STRIKE'); }
+            if (hasAbility(c,'deathtouch')) { addMark(card,'DEATHTOUCH'); }
+            if (hasAbility(c,'lifelink')) { addMark(card,'LIFELINK'); }
+            if (hasAbility(c,'flying')) { addMark(card,'FLYING'); }
+            if (hasAbility(c,'reach')) { addMark(card,'REACH'); }
+            if (hasAbility(c,'vigilance')) { addMark(card,'VIGILANCE'); }
+            if (hasAbility(c,'haste')) { addMark(card,'HASTE'); }
+            if (hasAbility(c,'menace')) { addMark(card,'MENACE'); }
+            if (hasAbility(c,'hexproof')) { addMark(card,'HEXPROOF'); }
+            if (hasAbility(c,'indestructible')) { addMark(card,'INDESTRUCTIBLE'); }
+            if (hasAbility(c,'ward_2')) { addMark(card,'WARD 2'); }
+            if (hasAbility(c,'protection_red')) { addMark(card,'PROTECTION RED'); }
+            if (hasAbility(c,'flash')) { addMark(card,'FLASH'); }
+            if (hasAbility(c,'defender')) { addMark(card,'DEFENDER'); }
+            if (Number(c.plus1Counters || 0) > 0) { addMark(card,'+1/+1 x ' + Number(c.plus1Counters)); }
+            if (c.isToken) { addMark(card,'TOKEN'); }
+            if (Number(c.damageMarked || 0) > 0) { addMark(card,'DAMAGE ' + Number(c.damageMarked)); }
+            if (Number(c.tempPowerBonus || 0) || Number(c.tempToughnessBonus || 0)) { addMark(card,'+' + Number(c.tempPowerBonus || 0) + '/+' + Number(c.tempToughnessBonus || 0)); }
+            area.appendChild(card);
         }
-    );
+    }
 
+    function renderPlayer(number, player, state) {
+        text('p' + number + 'Life', player.life);
+        text('p' + number + 'Hand', player.handCount);
+        text('p' + number + 'Deck', player.libraryCount);
+        text('p' + number + 'Grave', player.graveyardCount || 0);
+        renderLands(number, player);
+        renderArtifacts(number, player);
+        renderCreatures(number, player, state);
+    }
 
-    // --------------------------------------
-    // CREATURES
-    // --------------------------------------
+    function phaseLabel(phase) {
+        var p = {
+            opening_hand:'OPENING HAND', deck_selection:'DECK SELECTION', untap:'UNTAP STEP', upkeep:'UPKEEP STEP', draw:'DRAW STEP',
+            main:'PRECOMBAT MAIN', main1:'PRECOMBAT MAIN', begin_combat:'BEGINNING OF COMBAT', choose_attackers:'DECLARE ATTACKERS',
+            declare_attackers:'DECLARE ATTACKERS', choose_blockers:'DECLARE BLOCKERS', declare_blockers:'DECLARE BLOCKERS',
+            combat_damage:'COMBAT DAMAGE', end_combat:'END OF COMBAT', main2:'MAIN PHASE 2', end_step:'END STEP', cleanup:'CLEANUP STEP', game_over:'GAME OVER'
+        };
+        return p[phase] || String(phase || '').toUpperCase();
+    }
 
-    player.creatures.forEach(
-        creature => {
+    function renderPhaseTracker(state) {
+        var major = document.getElementById('bfMajor');
+        var steps = document.getElementById('bfSteps');
+        var step = state.turnStep || state.phase;
+        var names = ['BEGINNING','MAIN PHASE 1','COMBAT','MAIN PHASE 2','ENDING'];
+        var group = 0, i, s;
+        if (step === 'main' || step === 'main1') { group = 1; }
+        else if (step === 'begin_combat' || step === 'choose_attackers' || step === 'declare_attackers' || step === 'choose_blockers' || step === 'declare_blockers' || step === 'combat_damage' || step === 'end_combat') { group = 2; }
+        else if (step === 'main2') { group = 3; }
+        else if (step === 'end_step' || step === 'cleanup') { group = 4; }
+        clearNode(major);
+        clearNode(steps);
+        for (i = 0; i < names.length; i += 1) {
+            s = document.createElement('span');
+            s.className = i < group ? 'done' : (i === group ? 'active' : '');
+            s.appendChild(document.createTextNode((i < group ? '✓ ' : '') + names[i]));
+            major.appendChild(s);
+        }
+        s = document.createElement('span');
+        s.className = 'active';
+        s.appendChild(document.createTextNode(phaseLabel(step)));
+        steps.appendChild(s);
+    }
 
-            const element =
-                document.createElement(
-                    "div"
-                );
+    function setRealm(number, deckId) {
+        var sec = document.getElementsByClassName ? document.getElementsByClassName('player-' + number)[0] : null;
+        if (!sec) { return; }
+        if (deckId === 'burning_legion') { sec.className = 'player player-' + number + ' theme-red realm-mountain'; }
+        else if (deckId === 'forest_fury') { sec.className = 'player player-' + number + ' theme-green realm-forest'; }
+    }
 
+    function renderGameState(state) {
+        if (!state || !state.players) { return; }
+        lastState = state;
+        text('turnPlayer', 'PLAYER ' + state.currentPlayer);
+        text('turnNumber', state.turnNumber);
+        text('phaseText', phaseLabel(state.phase));
+        renderPhaseTracker(state);
+        renderPlayer(1, state.players[1], state);
+        renderPlayer(2, state.players[2], state);
+        if (state.selectedDecks) {
+            setRealm(1, state.selectedDecks[1]);
+            setRealm(2, state.selectedDecks[2]);
+        }
+        var overlay = document.getElementById('gameOverOverlay');
+        if (overlay) {
+            if (state.gameOver) {
+                text('gameOverKicker', state.winner ? 'VICTORY' : 'GAME OVER');
+                text('gameOverTitle', state.winner ? 'PLAYER ' + state.winner + ' WINS' : 'DRAW');
+                text('gameOverReason', state.gameOverReason || 'Kampen er slut.');
+                overlay.className = 'game-over-overlay show';
+            } else { overlay.className = 'game-over-overlay'; }
+        }
+    }
 
-            element.className =
-                "card";
-
-            element.dataset.creatureId = creature.id;
-
-
-            if (
-                creature.tapped
-            ) {
-
-                element.classList.add(
-                    "tapped"
-                );
-            }
-
-
-            if (
-                playerNumber ===
-                    state.currentPlayer &&
-                state.combat
-                    .attackerIds
-                    .includes(
-                        creature.id
-                    )
-            ) {
-
-                element.classList.add(
-                    "attacking"
-                );
-
-                if (Array.isArray(creature.abilities) && creature.abilities.includes("vigilance")) {
-                    element.classList.add("vigilance-attacker");
+    function poll() {
+        var xhr;
+        if (requestInFlight) { return; }
+        requestInFlight = true;
+        try {
+            xhr = new XMLHttpRequest();
+            xhr.onreadystatechange = function () {
+                if (xhr.readyState === 4) {
+                    requestInFlight = false;
+                    if (xhr.status >= 200 && xhr.status < 300) {
+                        try { renderGameState(JSON.parse(xhr.responseText)); } catch (ignore) {}
+                    }
                 }
-            }
-
-
-            const blockingTarget =
-                findBlockingTarget(
-                    creature.id,
-                    state.combat
-                        .blockers
-                );
-
-
-            if (blockingTarget) {
-
-                element.classList.add(
-                    "blocking"
-                );
-            }
-
-
-            element.innerHTML = `
-
-                <div class="card-name">
-                    ${creature.name}
-                </div>
-
-                <div class="icon">
-                    ${creature.icon}
-                </div>
-
-                <div class="stats">
-                    ${Number(creature.power || 0)}/${Number(creature.toughness || 0)}
-                </div>
-
-            `;
-
-            if (Array.isArray(creature.abilities) && creature.abilities.includes("trample")) {
-                const ability = document.createElement("div");
-                ability.className = "ability-mark";
-                ability.textContent = "🐾 TRAMPLE";
-                element.appendChild(ability);
-            }
-
-            if (Array.isArray(creature.abilities) && creature.abilities.includes("first_strike")) {
-                const ability = document.createElement("div");
-                ability.className = "ability-mark";
-                ability.textContent = "⚔️ FIRST STRIKE";
-                element.appendChild(ability);
-            }
-
-            if (Array.isArray(creature.abilities) && creature.abilities.includes("double_strike")) {
-                const ability = document.createElement("div");
-                ability.className = "ability-mark";
-                ability.textContent = "⚔️⚔️ DOUBLE STRIKE";
-                element.appendChild(ability);
-            }
-
-            if (Array.isArray(creature.abilities) && creature.abilities.includes("deathtouch")) {
-                const ability = document.createElement("div");
-                ability.className = "ability-mark";
-                ability.textContent = "☠️ DEATHTOUCH";
-                element.appendChild(ability);
-            }
-
-            if (Array.isArray(creature.abilities) && creature.abilities.includes("lifelink")) {
-                const ability = document.createElement("div");
-                ability.className = "ability-mark";
-                ability.textContent = "❤️ LIFELINK";
-                element.appendChild(ability);
-            }
-
-            if (Array.isArray(creature.abilities) && creature.abilities.includes("flying")) {
-                const ability = document.createElement("div");
-                ability.className = "ability-mark";
-                ability.textContent = "🪽 FLYING";
-                element.appendChild(ability);
-            }
-
-            if (Array.isArray(creature.abilities) && creature.abilities.includes("reach")) {
-                const ability = document.createElement("div");
-                ability.className = "ability-mark";
-                ability.textContent = "🏹 REACH";
-                element.appendChild(ability);
-            }
-
-            if (Array.isArray(creature.abilities) && creature.abilities.includes("vigilance")) {
-                const ability = document.createElement("div");
-                ability.className = "ability-mark";
-                ability.textContent = "👁️ VIGILANCE";
-                element.appendChild(ability);
-            }
-
-            if (Array.isArray(creature.abilities) && creature.abilities.includes("haste")) {
-                const ability = document.createElement("div");
-                ability.className = "ability-mark";
-                ability.textContent = "⚡ HASTE";
-                element.appendChild(ability);
-            }
-
-            if (Array.isArray(creature.abilities) && creature.abilities.includes("menace")) {
-                const ability = document.createElement("div");
-                ability.className = "ability-mark";
-                ability.textContent = "👹 MENACE";
-                element.appendChild(ability);
-            }
-
-            if (Array.isArray(creature.abilities) && creature.abilities.includes("hexproof")) {
-                const ability = document.createElement("div");
-                ability.className = "ability-mark";
-                ability.textContent = "🛡️ HEXPROOF";
-                element.appendChild(ability);
-            }
-
-            if (Array.isArray(creature.abilities) && creature.abilities.includes("indestructible")) {
-                const ability = document.createElement("div");
-                ability.className = "ability-mark";
-                ability.textContent = "💎 INDESTRUCTIBLE";
-                element.appendChild(ability);
-            }
-
-            if (Array.isArray(creature.abilities) && creature.abilities.includes("ward_2")) {
-                const ability = document.createElement("div");
-                ability.className = "ability-mark";
-                ability.textContent = "🛡️ WARD 2";
-                element.appendChild(ability);
-            }
-
-            if (Array.isArray(creature.abilities) && creature.abilities.includes("protection_red")) {
-                const ability = document.createElement("div");
-                ability.className = "ability-mark";
-                ability.textContent = "🛡️ PROTECTION RED";
-                element.appendChild(ability);
-            }
-
-            if (Array.isArray(creature.abilities) && creature.abilities.includes("flash")) {
-                const ability = document.createElement("div");
-                ability.className = "ability-mark";
-                ability.textContent = "⚡ FLASH";
-                element.appendChild(ability);
-            }
-
-            if (Array.isArray(creature.abilities) && creature.abilities.includes("defender")) {
-                const ability = document.createElement("div");
-                ability.className = "ability-mark";
-                ability.textContent = "🧱 DEFENDER";
-                element.appendChild(ability);
-            }
-
-            if (Number(creature.plus1Counters || 0) > 0) {
-                const counter = document.createElement("div");
-                counter.className = "ability-mark";
-                counter.textContent = `➕ +1/+1 × ${Number(creature.plus1Counters)}`;
-                element.appendChild(counter);
-            }
-
-            if (creature.isToken) {
-                const token = document.createElement("div");
-                token.className = "ability-mark";
-                token.textContent = "● TOKEN";
-                element.appendChild(token);
-            }
-
-            if (creature.triggeredAbility) {
-                const trigger = document.createElement("div");
-                trigger.className = "ability-mark";
-                trigger.textContent = `🔔 ${creature.triggeredAbility.text}`;
-                element.appendChild(trigger);
-            }
-
-            if (creature.etbAbility) {
-                const etb = document.createElement("div");
-                etb.className = "ability-mark";
-                etb.textContent = `✨ ETB · +${Number(creature.etbAbility.amount || 0)} LIFE`;
-                element.appendChild(etb);
-            }
-
-            if (Array.isArray(creature.attachedAuras)) {
-                creature.attachedAuras.forEach(aura => {
-                    const mark = document.createElement("div");
-                    mark.className = "ability-mark";
-                    mark.textContent = `✨ ${aura.name} +${Number(aura.powerBonus || 0)}/+${Number(aura.toughnessBonus || 0)}`;
-                    element.appendChild(mark);
-                });
-            }
-
-            if (Number(creature.damageMarked || 0) > 0) {
-                const damage = document.createElement("div");
-                damage.className = "damage-mark";
-                damage.textContent = `🔥 ${creature.damageMarked}`;
-                element.appendChild(damage);
-            }
-
-            if (Number(creature.tempPowerBonus || 0) > 0 || Number(creature.tempToughnessBonus || 0) > 0) {
-                const buff = document.createElement("div");
-                buff.className = "buff-mark";
-                buff.textContent = `🌿 +${creature.tempPowerBonus || 0}/+${creature.tempToughnessBonus || 0}`;
-                element.appendChild(buff);
-            }
-
-
-            if (blockingTarget) {
-
-                const attacker =
-                    findCreatureById(
-                        blockingTarget,
-                        state
-                    );
-
-
-                const label =
-                    document.createElement(
-                        "div"
-                    );
-
-
-                label.className =
-                    "block-label";
-
-
-                label.textContent =
-                    attacker
-                        ? `🛡️ ${attacker.name}`
-                        : "🛡️ BLOCK";
-
-
-                element.appendChild(
-                    label
-                );
-            }
-
-
-            creatureArea
-                .appendChild(
-                    element
-                );
-        }
-    );
-
-
-    // --------------------------------------
-    // LANDS
-    // --------------------------------------
-
-    player.lands.forEach(
-        land => {
-
-            const element =
-                document.createElement(
-                    "div"
-                );
-
-
-            element.className =
-                "card land-card";
-
-
-            if (
-                land.tapped
-            ) {
-
-                element.classList.add(
-                    "tapped"
-                );
-            }
-
-
-            element.innerHTML = `
-
-                <div class="card-name">
-                    ${land.name}
-                </div>
-
-                <div class="icon">
-                    ${land.icon}
-                </div>
-
-                <div class="stats">
-                    MANA
-                </div>
-
-            `;
-
-
-            landArea
-                .appendChild(
-                    element
-                );
-        }
-    );
-}
-
-
-// ======================================================
-// COMBAT HELPERS
-// ======================================================
-
-function findBlockingTarget(
-    blockerId,
-    blockers
-) {
-
-    for (
-        const attackerId
-        of Object.keys(
-            blockers
-        )
-    ) {
-
-        if (
-            (
-                blockers[
-                    attackerId
-                ] || []
-            )
-            .includes(
-                blockerId
-            )
-        ) {
-
-            return attackerId;
-        }
+            };
+            xhr.open('GET', '/api/game-state?t=' + new Date().getTime(), true);
+            xhr.setRequestHeader('Cache-Control', 'no-cache');
+            xhr.send(null);
+        } catch (e) { requestInFlight = false; }
     }
 
-
-    return null;
-}
-
-
-function findCreatureById(
-    id,
-    state
-) {
-
-    return [
-
-        ...state.players[1]
-            .creatures,
-
-        ...state.players[2]
-            .creatures
-
-    ]
-    .find(
-        creature =>
-            creature.id === id
-    );
-}
-
-
-// ======================================================
-// MESSAGE
-// ======================================================
-
-function showMessage(text) {
-
-    const element =
-        document.getElementById(
-            "message"
-        );
-
-
-    element.textContent =
-        text;
-
-
-    element
-        .classList
-        .remove(
-            "show"
-        );
-
-
-    void element.offsetWidth;
-
-
-    element
-        .classList
-        .add(
-            "show"
-        );
-}
-
+    poll();
+    pollTimer = window.setInterval(poll, 750);
+}());
 </script>
 
 </body>
